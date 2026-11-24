@@ -36,7 +36,9 @@ public class SurvivalHUD : MonoBehaviour
     GameObject card, working, endPanel, rainLayer;
     RectTransform[] drops = new RectTransform[RainDrops];
     float[] dropSpeed = new float[RainDrops];
-    float toastUntil;
+    float toastUntil, bubbleUntil;
+    Text bubbleText;
+    GameObject bubble;
     bool missionsDirty = true;
 
     void Start()
@@ -56,6 +58,7 @@ public class SurvivalHUD : MonoBehaviour
             actions.PreviewClosed += OnPreviewClosed;
             actions.ActionStarted += OnActionStarted;
             actions.Message += Toast;
+            actions.Thought += ShowThought;
         }
         if (stats != null) stats.LevelChanged += OnLevelChanged;
         if (objectives != null)
@@ -73,6 +76,7 @@ public class SurvivalHUD : MonoBehaviour
             actions.PreviewClosed -= OnPreviewClosed;
             actions.ActionStarted -= OnActionStarted;
             actions.Message -= Toast;
+            actions.Thought -= ShowThought;
         }
         if (stats != null) stats.LevelChanged -= OnLevelChanged;
         if (objectives != null)
@@ -116,7 +120,30 @@ public class SurvivalHUD : MonoBehaviour
     {
         if (level == 0) return;
         string what = level == 2 ? "very low" : "getting low";
-        Toast($"{Labels[(int)type]} is {what}!");
+        string tip = "";
+        if (GameHints.Enabled) switch (type)
+        {
+            case StatType.Energy: tip = " Sleep at a camp to recover."; break;
+            case StatType.Water: tip = " Boil stream water at a fire."; break;
+            case StatType.Food: tip = " Eat the airline snack."; break;
+            case StatType.Warmth: tip = " Fire, shelter, more layers (look in trees)."; break;
+        }
+        Toast($"{Labels[(int)type]} is {what}!{tip}");
+        if (level == 2) ShowThought(CriticalThoughts[(int)type]);
+    }
+
+    static readonly string[] CriticalThoughts =
+    {
+        "My legs have filed a complaint. It was rejected, like everything else lately.",
+        "Tongue like sandpaper. Funny how a whole stream can feel like a rumour.",
+        "My stomach is composing a farewell speech.",
+        "I can't feel my fingers. At least I can't feel the rest either.",
+    };
+
+    void ShowThought(string text)
+    {
+        bubbleText.text = "<i>\"" + text + "\"</i>";
+        bubbleUntil = Time.time + 6f;
     }
 
     void OnObjectivesChanged() => missionsDirty = true;
@@ -134,6 +161,12 @@ public class SurvivalHUD : MonoBehaviour
     void Update()
     {
         if (stats == null) return;
+        if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.hKey.wasPressedThisFrame)
+        {
+            GameHints.Enabled = !GameHints.Enabled;
+            missionsDirty = true;
+            Toast(GameHints.Enabled ? "Hints on" : "Hints off");
+        }
         var clock = GameClock.Instance;
         var gm = GameManager.Instance;
 
@@ -163,6 +196,7 @@ public class SurvivalHUD : MonoBehaviour
         promptText.text = showPrompt ? $"[E]  {player.Nearest.ActiveAction.name}" : "";
 
         toastText.gameObject.SetActive(Time.time < toastUntil);
+        bubble.SetActive(Time.time < bubbleUntil);
         UpdateRain();
 
         if (gm != null && gm.State != GameState.Playing)
@@ -203,11 +237,19 @@ public class SurvivalHUD : MonoBehaviour
         if (inventory == null) return "";
         var sb = new StringBuilder("Items: ");
         bool any = false;
+        int junk = 0;
         foreach (var kv in inventory.All)
         {
+            if (kv.Key.IsJunk()) { junk += kv.Value; continue; }
             if (any) sb.Append(", ");
             sb.Append(kv.Key.Pretty());
             if (kv.Value > 1) sb.Append(" x").Append(kv.Value);
+            any = true;
+        }
+        if (junk > 0)
+        {
+            if (any) sb.Append(", ");
+            sb.Append("Junk x").Append(junk);
             any = true;
         }
         if (!any) sb.Append("-");
@@ -218,7 +260,15 @@ public class SurvivalHUD : MonoBehaviour
     {
         var sb = new StringBuilder();
         if (Weather.Instance != null && Weather.Instance.IsRaining) sb.Append("RAIN   ");
+        if (stats.IsWet) sb.Append("WET CLOTHES   ");
+        if (stats.gearFactor < 0.999f) sb.Append($"Clothing: warmth loss x{stats.gearFactor:0.00}   ");
+        if (player != null && player.CurrentTerrain != null) sb.Append(player.CurrentTerrain.label).Append("   ");
         if (!string.IsNullOrEmpty(stats.ZoneLabel)) sb.Append(stats.ZoneLabel);
+        if (inventory != null && inventory.Has(ItemType.Map) && RescuePoint.Instance != null)
+        {
+            if (sb.Length > 0) sb.Append("   ");
+            sb.Append("Map: rescue spot ").Append(RescuePoint.Instance.DirectionFrom(stats.transform.position));
+        }
         var fire = Campfire.NearestLit(stats.transform.position, 8f);
         if (fire != null)
         {
@@ -241,7 +291,7 @@ public class SurvivalHUD : MonoBehaviour
             else if (o == current)
             {
                 sb.Append("<color=#fff2a0>[ ] ").Append(o.title).Append("</color>\n");
-                sb.Append("<color=#d0d0d0>      ").Append(o.hint).Append("</color>\n");
+                if (GameHints.Enabled) sb.Append("<color=#d0d0d0>      ").Append(o.hint).Append("</color>\n");
             }
             else
             {
@@ -301,7 +351,7 @@ public class SurvivalHUD : MonoBehaviour
         promptText = MakeText("Prompt", root, "", 34, TextAnchor.MiddleCenter, bottom, bottom,
                               new Vector2(0, 90), new Vector2(1200, 56), new Color(1f, 0.95f, 0.6f));
 
-        MakeText("Controls", root, "WASD / Arrows: move     E: interact     Esc: cancel     R: restart (after the end)",
+        MakeText("Controls", root, "WASD / Arrows: move     E: interact     Esc: cancel     H: hints on/off     R: restart (after the end)",
                  20, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, new Vector2(24, 16), new Vector2(1400, 30),
                  new Color(1, 1, 1, 0.7f));
 
@@ -310,6 +360,15 @@ public class SurvivalHUD : MonoBehaviour
         toastText = MakeText("Toast", root, "", 34, TextAnchor.MiddleCenter, top, top,
                              new Vector2(0, -150), new Vector2(1400, 60), new Color(1f, 0.95f, 0.6f));
         toastText.gameObject.SetActive(false);
+
+        // Thought bubble (bottom-center, above the prompt): the character's inner voice
+        var bubbleImg = MakeImage("Bubble", root, new Color(0.08f, 0.08f, 0.1f, 0.85f), bottom, new Vector2(0.5f, 0f),
+                                  new Vector2(0, 150), new Vector2(1300, 110));
+        bubble = bubbleImg.gameObject;
+        bubbleText = MakeText("BubbleText", bubble.transform, "", 32, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                              Vector2.zero, new Vector2(1240, 100), new Color(0.85f, 0.88f, 1f));
+        bubbleText.fontStyle = FontStyle.Italic;
+        bubble.SetActive(false);
 
         // Action preview card (center)
         var mid = new Vector2(0.5f, 0.5f);

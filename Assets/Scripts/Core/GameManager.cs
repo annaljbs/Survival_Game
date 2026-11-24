@@ -48,7 +48,9 @@ public class GameManager : MonoBehaviour
         if (ObjectiveManager.Instance != null) ObjectiveManager.Instance.Milestone("rescued");
         var c = GameClock.Instance;
         EndTitle = "Rescued!";
-        EndDetail = c != null ? $"You reached the rescue point on day {c.DayCount} at {c.TimeText}." : "";
+        EndDetail = c != null ? $"You were found on day {c.DayCount} at {c.TimeText}." : "";
+        var missions = ObjectiveManager.Instance;
+        if (missions != null) EndDetail += $"   Missions: {missions.DoneCount}/{missions.Objectives.Count}";
     }
 
     void OnDied()

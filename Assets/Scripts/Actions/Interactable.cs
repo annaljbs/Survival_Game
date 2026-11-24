@@ -18,6 +18,8 @@ public class Interactable : MonoBehaviour
     public Campfire fire;
     [Tooltip("If set, the player is moved here after the action (e.g. climbing).")]
     public Transform moveTo;
+    [Tooltip("The camp area this object improves (e.g. building a lean-to).")]
+    public ShelterZone zone;
 
     public bool Used { get; private set; }
 
@@ -61,6 +63,20 @@ public class Interactable : MonoBehaviour
         if (a.forbiddenFlag != WorldFlag.None && world != null && world.Has(a.forbiddenFlag))
             return string.IsNullOrEmpty(a.forbiddenFlagHint) ? $"Not possible right now ({a.forbiddenFlag})" : a.forbiddenFlagHint;
 
+        if (a.onlyUntilHour > a.onlyFromHour && GameClock.Instance != null)
+        {
+            float h = GameClock.Instance.HourOfDay;
+            if (h < a.onlyFromHour || h >= a.onlyUntilHour)
+                return string.IsNullOrEmpty(a.timeHint) ? $"Only possible between {a.onlyFromHour:0}:00 and {a.onlyUntilHour:0}:00" : a.timeHint;
+        }
+
+        if (a.shelterStage != ShelterStage.None)
+        {
+            if (zone == null) return "There is no camp site here";
+            string why = zone.CanBuild(a.shelterStage);
+            if (why != null) return why;
+        }
+
         if (a.fireRule != FireRule.None)
         {
             if (fire == null) return "There is no fire pit here";
@@ -79,7 +95,7 @@ public class Interactable : MonoBehaviour
             foreach (var r in a.requirements)
             {
                 if (inventory.Count(r.item) >= r.count) continue;
-                if (!string.IsNullOrEmpty(r.missingHint)) return r.missingHint;
+                if (GameHints.Enabled && !string.IsNullOrEmpty(r.missingHint)) return r.missingHint;
                 return r.count > 1 ? $"Needs: {r.item.Pretty()} x{r.count}" : $"Needs: {r.item.Pretty()}";
             }
         }

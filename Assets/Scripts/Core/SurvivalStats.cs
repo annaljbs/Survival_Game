@@ -31,8 +31,21 @@ public class SurvivalStats : MonoBehaviour
     [Tooltip("Set by Weather while it rains.")]
     public float weatherFactor = 1f;
 
-    /// <summary>Total multiplier on warmth loss: gear x shelter x weather.</summary>
-    public float ExposureMultiplier => gearFactor * shelterFactor * weatherFactor;
+    [Tooltip("Warmth loss multiplier while clothes are wet (after wading through the river).")]
+    public float wetFactor = 1.4f;
+
+    /// <summary>Set by ShelterZone: true under an overhang or lean-to, where rain does not count.</summary>
+    public bool RainProtected { get; set; }
+
+    /// <summary>Game minutes until the clothes are dry. Dries 4x faster next to a lit fire.</summary>
+    public float WetMinutes { get; private set; }
+    public bool IsWet => WetMinutes > 0f;
+
+    public void MakeWet(float minutes) => WetMinutes = Mathf.Max(WetMinutes, minutes);
+
+    /// <summary>Total multiplier on warmth loss: gear x shelter x weather (unless rain-protected) x wet clothes.</summary>
+    public float ExposureMultiplier =>
+        gearFactor * shelterFactor * (RainProtected ? 1f : weatherFactor) * (IsWet ? wetFactor : 1f);
 
     /// <summary>Name of the place the player is in (set by ShelterZone), for the HUD.</summary>
     public string ZoneLabel { get; set; } = "";
@@ -91,6 +104,9 @@ public class SurvivalStats : MonoBehaviour
         bool night = GameClock.Instance != null && GameClock.Instance.IsNight;
         float warmthLoss = (night ? warmthLossNight : warmthLossDay) * ExposureMultiplier;
         float fireWarmth = Campfire.WarmthAt(transform.position);   // being close to a lit fire warms you
+        // Standing in the rain without a roof soaks your clothes (3 hours to dry afterwards).
+        if (weatherFactor > 1f && !RainProtected) MakeWet(180f);
+        if (WetMinutes > 0f) WetMinutes = Mathf.Max(0f, WetMinutes - minutes * (fireWarmth > 0f ? 4f : 1f));
 
         if (!IsResting) Energy = Mathf.Max(0f, Energy - energyLossPerMinute * minutes);
         Water = Mathf.Max(0f, Water - waterLoss * minutes);

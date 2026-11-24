@@ -20,6 +20,8 @@ public class ActionSystem : MonoBehaviour
     public event Action<Interactable> ActionStarted;
     public event Action<Interactable> ActionCompleted;
     public event Action<string> Message;
+    /// <summary>A thought bubble (the character's inner voice).</summary>
+    public event Action<string> Thought;
 
     SurvivalStats stats;
     GameClock clock;
@@ -37,6 +39,9 @@ public class ActionSystem : MonoBehaviour
 
     /// <summary>Show a message in the HUD (used by weather, fire, ...).</summary>
     public void Say(string message) => Message?.Invoke(message);
+
+    /// <summary>Show a thought bubble.</summary>
+    public void Think(string thought) => Thought?.Invoke(thought);
 
     public void OnInteractPressed(Interactable nearest)
     {
@@ -136,6 +141,8 @@ public class ActionSystem : MonoBehaviour
             else if (a.fireEffect == FireEffect.AddFuel) target.fire.AddFuel(a.fuelMinutes);
         }
         if (a.setsFlag != WorldFlag.None && WorldState.Instance != null) WorldState.Instance.Set(a.setsFlag, true);
+        if (a.shelterStage != ShelterStage.None && target.zone != null)
+            target.zone.Build(a.shelterStage, a.roofIsTarp);
         if (!Mathf.Approximately(a.exposureFactor, 1f)) stats.gearFactor *= a.exposureFactor;
 
         stats.Apply(a.energyDelta, a.waterDelta, a.foodDelta, a.warmthDelta);
@@ -153,6 +160,8 @@ public class ActionSystem : MonoBehaviour
         }
 
         if (!string.IsNullOrEmpty(a.resultText)) Message?.Invoke(a.resultText);
+        if (!string.IsNullOrEmpty(a.thought)) Thought?.Invoke(a.thought);
+        if (a.winsGame && GameManager.Instance != null) GameManager.Instance.Win();
         ActionCompleted?.Invoke(target);
     }
 }

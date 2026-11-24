@@ -13,7 +13,7 @@ public class Campfire : MonoBehaviour
     public float burnMinutes = 180f;
     public float maxBurnMinutes = 360f;
     [Tooltip("How close you must be to feel the warmth.")]
-    public float warmRadius = 4.5f;
+    public float warmRadius = 5.5f;
     [Tooltip("Warmth gained per game minute next to the fire (night loss is 0.10).")]
     public float warmthPerMinute = 0.20f;
 

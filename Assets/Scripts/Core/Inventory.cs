@@ -11,10 +11,22 @@ public enum ItemType
 {
     None, Bottle, DirtyWater, CleanWater, Jacket, Lighter, Map, Snack,
     Tarp, Tinder, Kindling, Logs, WetTinder, WetKindling, WetLogs, GreenWood,
+    Boughs,
+    // Found along the paths. SpaceBlanket and Whistle are useful, the rest is junk (for the jokes).
+    SpaceBlanket, Whistle, OddShoe, SelfieStick, DeadPowerBank, BrokenDrone, BeachBall, Guidebook,
+    // Spare clothes from the wreck, scattered around: each one lowers warmth loss.
+    WoolSweater, WoolHat, DrySocks, Gloves,
 }
 
 public static class ItemInfo
 {
+    /// <summary>Useless things you can pick up for fun (the HUD shows them together as "Junk").</summary>
+    public static bool IsJunk(this ItemType type)
+    {
+        return type == ItemType.OddShoe || type == ItemType.SelfieStick || type == ItemType.DeadPowerBank ||
+               type == ItemType.BrokenDrone || type == ItemType.BeachBall || type == ItemType.Guidebook;
+    }
+
     /// <summary>"DirtyWater" -> "Dirty Water".</summary>
     public static string Pretty(this ItemType type)
     {

@@ -93,13 +93,13 @@ public class ObjectiveManager : MonoBehaviour
             "Check your phone. Spoiler: no bars.",
             () => Has("phone_checked"));
         Add("salvage", "Salvage supplies",
-            "Search the wreck. You need at least a bottle and a lighter; a jacket, tarp and map help too.",
+            "Search the wreck. You need at least a bottle and a lighter; a jacket, tarp and map help too. More clothes are scattered around: look in the trees.",
             () => Holds(ItemType.Bottle) && Holds(ItemType.Lighter));
         Add("water", "Find water",
             "Fill your bottle at the stream. Do not drink it yet.",
             () => Has("water_filled"));
         Add("materials", "Gather fire materials",
-            "Dry tinder, dry kindling and 2 dry logs. Do it before it rains!",
+            "Dry grass: meadow by the stream (east). Dead twigs: forest edge (north). 2 dry logs: log field (far north-west). Before it rains!",
             () => Holds(ItemType.Tinder) && Holds(ItemType.Kindling) && Holds(ItemType.Logs, 2));
         Add("fire", "Build a fire",
             "Use a fire pit at a camp spot. Pick the spot where you want to spend the night.",
@@ -107,14 +107,17 @@ public class ObjectiveManager : MonoBehaviour
         Add("boil", "Make the water safe",
             "Boil your dirty water on the lit fire.",
             () => Has("water_boiled"));
+        Add("shelter", "Build a dry shelter",
+            "At a camp: frame (1 green bush cut = 3 poles), then a roof (tarp, or 6 spruce boughs). Rain must not get in. Avoid low ground!",
+            () => Has("shelter_frame") && Has("shelter_roof"));
         Add("sleep", "Get some sleep",
-            "Cold and rain are coming. Stay close to the fire and rest.",
+            "Sleep inside your shelter (the spot to the right of the fire pit). A bed of boughs keeps the cold ground out.",
             () => Has("slept"));
         Add("night", "Survive the night",
             "Keep warm, keep the fire fed and make it to the morning.",
             () => Has("slept") && GameClock.Instance != null && GameClock.Instance.TotalMinutes >= 1440f + 6f * 60f);
-        Add("rescue", "Reach the rescue point",
-            "Find your way to the cyan marker.",
+        Add("rescue", "Get rescued",
+            "Find the rescue spot (the crew map shows the direction), make a signal and wait there in daylight (08:00 to 16:00).",
             () => Has("rescued"));
     }
 

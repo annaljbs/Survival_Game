@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +19,12 @@ public class PlayerController : MonoBehaviour
     public float interactRadius = 1.6f;
 
     public Interactable Nearest { get; private set; }
+
+    /// <summary>The terrain zone the player stands in (most recently entered), or null for normal ground.</summary>
+    public TerrainZone CurrentTerrain => terrain.Count > 0 ? terrain[terrain.Count - 1] : null;
+
+    readonly List<TerrainZone> terrain = new List<TerrainZone>();
+    float speedMultiplier = 1f;
 
     Rigidbody2D rb;
     SurvivalStats stats;
@@ -92,17 +99,33 @@ public class PlayerController : MonoBehaviour
         FindNearest();
 
         moveInput = Vector2.ClampMagnitude(move.ReadValue<Vector2>(), 1f);
+
+        var zone = CurrentTerrain;
+        speedMultiplier = zone != null ? zone.speedMultiplier : 1f;
         if (moveInput.sqrMagnitude > 0.0001f)
         {
-            float distance = moveSpeed * moveInput.magnitude * Time.deltaTime;
-            stats.Apply(energy: -distance * energyPerUnit);
+            float distance = moveSpeed * speedMultiplier * moveInput.magnitude * Time.deltaTime;
+            float energyMultiplier = zone != null ? zone.energyMultiplier : 1f;
+            float warmthLoss = zone != null ? zone.warmthPerUnit : 0f;
+            stats.Apply(energy: -distance * energyPerUnit * energyMultiplier, warmth: -distance * warmthLoss);
         }
     }
 
     void FixedUpdate()
     {
-        rb.linearVelocity = frozen ? Vector2.zero : moveInput * moveSpeed;
+        rb.linearVelocity = frozen ? Vector2.zero : moveInput * moveSpeed * speedMultiplier;
     }
+
+    public void EnterTerrain(TerrainZone zone)
+    {
+        if (terrain.Contains(zone)) return;
+        terrain.Add(zone);
+        if (zone.entryWarmthLoss > 0f) stats.Apply(warmth: -zone.entryWarmthLoss);
+        if (zone.makesWet) stats.MakeWet(zone.wetMinutes);
+        if (actions != null && !string.IsNullOrEmpty(zone.enterMessage)) actions.Say(zone.enterMessage);
+    }
+
+    public void ExitTerrain(TerrainZone zone) => terrain.Remove(zone);
 
     void FindNearest()
     {

@@ -4,6 +4,7 @@ using UnityEngine;
 
 public enum FireRule { None, NeedsLit, NeedsUnlit }
 public enum FireEffect { None, Light, AddFuel }
+public enum ShelterStage { None, Frame, Roof, Bedding }
 
 [Serializable]
 public class ItemRequirement
@@ -55,6 +56,10 @@ public class ActionData
     public WorldFlag forbiddenFlag = WorldFlag.None;
     public string forbiddenFlagHint = "";
     public WorldFlag setsFlag = WorldFlag.None;
+    [Tooltip("Only possible between these hours of the day (e.g. 8 and 18). Leave both at 0 for 'any time'.")]
+    public float onlyFromHour;
+    public float onlyUntilHour;
+    public string timeHint = "";
 
     [Header("Fire (needs a Campfire on the Interactable)")]
     public FireRule fireRule = FireRule.None;
@@ -68,11 +73,19 @@ public class ActionData
     public bool oneShot = true;
     [Tooltip("Resting (sleep): no passive energy loss while it runs.")]
     public bool isRest;
+    [Tooltip("Builds this part of the shelter on the ShelterZone linked on the Interactable.")]
+    public ShelterStage shelterStage = ShelterStage.None;
+    [Tooltip("With shelterStage = Roof: what the roof is made of (changes how it looks).")]
+    public bool roofIsTarp;
+    [Tooltip("Completing this action wins the game (rescue).")]
+    public bool winsGame;
     [Tooltip("Name of a mission milestone that is reached when this action completes.")]
     public string milestone = "";
 
     [Header("Text")]
     [TextArea] public string resultText = "";
+    [Tooltip("What the character thinks afterwards (dark humour). Shown as a thought bubble.")]
+    [TextArea] public string thought = "";
 
     const string Good = "#8fe388";
     const string Bad = "#ff8f8f";

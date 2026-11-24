@@ -51,7 +51,11 @@ public class Weather : MonoBehaviour
         if (!warned && t >= RainStartMinute - warningMinutes)
         {
             warned = true;
-            if (actions != null) actions.Say($"Dark clouds are rolling in. Rain in about {warningMinutes:0} minutes!");
+            if (actions != null)
+            {
+                actions.Say($"Dark clouds are rolling in. Rain in about {warningMinutes:0} minutes!");
+                actions.Think("Clouds. Of course. The universe has a great sense of timing.");
+            }
         }
 
         bool shouldRain = t >= RainStartMinute && t < RainStartMinute + durationMinutes;
@@ -60,6 +64,10 @@ public class Weather : MonoBehaviour
         IsRaining = shouldRain;
         if (WorldState.Instance != null) WorldState.Instance.Set(WorldFlag.Raining, IsRaining);
         if (stats != null) stats.weatherFactor = IsRaining ? rainWeatherFactor : 1f;
-        if (actions != null) actions.Say(IsRaining ? "It starts to rain. Everything outside gets wet." : "The rain stops.");
+        if (actions != null)
+        {
+            actions.Say(IsRaining ? "It starts to rain. Everything outside gets wet." : "The rain stops.");
+            actions.Think(IsRaining ? "Rain. On top of everything else. Wonderful." : "The rain stops. Now everything is only slightly damp and mostly hopeless.");
+        }
     }
 }
