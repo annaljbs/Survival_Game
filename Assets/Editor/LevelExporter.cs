@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Menu: Survival > Make Level Editable (one time).
+/// Menu: Survival > Rebuild Level From Generator (REPLACES Level.unity). Already done once: Level.unity is a normal scene now.
 /// Turns the generated test level into a normal Unity scene that you edit by hand:
 ///   - the pixel-art sheets are cut into real Sprite assets (usable in the Tile Palette),
 ///   - the ground, paths and trees are real Tilemaps (trees have a collider: paint a tree = blocked, erase = open),
@@ -25,12 +25,12 @@ public static class LevelExporter
     const string Camp = "Pixel/Tilesets/tileset_camp";
     const string Hunter = "Pixel/Characters/Hunter";
 
-    [MenuItem("Survival/Make Level Editable (one time)")]
+    [MenuItem("Survival/Rebuild Level From Generator (REPLACES Level.unity)")]
     public static void Run()
     {
         if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Level.unity already exists",
-                "Making the level editable again will REPLACE Assets/Scenes/Level.unity and everything you changed in it. Continue?",
-                "Replace it", "Cancel"))
+                "This rebuilds the level from the generator and will REPLACE Assets/Scenes/Level.unity with everything you changed in it (tiles, objects, positions). You do NOT need this to edit the level. Continue only if you really want to start over.",
+                "Replace my level", "Cancel"))
             return;
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
@@ -45,6 +45,7 @@ public static class LevelExporter
 
         SliceSheetsAndBakeSprites(root);
         BuildTilemaps(root.transform);
+        ForestDecorator.Run(false);
         TrimHiddenForest(false);
         MakePrefabs();
         root.name = "LEVEL";
@@ -338,7 +339,7 @@ public static class LevelExporter
         return tilemap;
     }
 
-    static Tile MakeTile(string name, string resource, int x, int y, int w, int h, bool mirror, bool collider)
+    internal static Tile MakeTile(string name, string resource, int x, int y, int w, int h, bool mirror, bool collider)
     {
         string path = $"{TilesDir}/{name}.asset";
         var tile = AssetDatabase.LoadAssetAtPath<Tile>(path);
