@@ -39,6 +39,9 @@ public class ShelterZone : MonoBehaviour
     /// <summary>The rain is kept off only by a roof, and not on low ground.</summary>
     public bool KeepsRainOff => HasRoof && !lowGround;
 
+    /// <summary>The camp site the player stands in right now (null outside).</summary>
+    public static ShelterZone Current { get; private set; }
+
     SurvivalStats insideStats;
 
     void OnTriggerEnter2D(Collider2D other)
@@ -46,6 +49,7 @@ public class ShelterZone : MonoBehaviour
         var stats = other.GetComponent<SurvivalStats>();
         if (stats == null) return;
         insideStats = stats;
+        Current = this;
         Apply(stats);
     }
 
@@ -54,6 +58,7 @@ public class ShelterZone : MonoBehaviour
         var stats = other.GetComponent<SurvivalStats>();
         if (stats == null) return;
         insideStats = null;
+        if (Current == this) Current = null;
         stats.shelterFactor = 1f;
         stats.RainProtected = false;
         stats.ZoneLabel = "";
@@ -78,42 +83,50 @@ public class ShelterZone : MonoBehaviour
     /// <summary>Build one part of the shelter (also takes effect right away if the player is inside).</summary>
     public void Build(ShelterStage stage, bool tarpRoof)
     {
+        const string Camp = "Pixel/Tilesets/tileset_camp";
+        const string Nature = "Pixel/Tilesets/TilesetNature";
         switch (stage)
         {
             case ShelterStage.Frame:
                 if (HasFrame) return;
                 HasFrame = true;
-                Part("Shelter frame", new Vector2(0, 0), new Vector2(4.4f, 0.4f), new Color(0.35f, 0.22f, 0.10f), 4);
-                Part("Shelter post", new Vector2(-2f, -1.1f), new Vector2(0.4f, 2.4f), new Color(0.35f, 0.22f, 0.10f), 4);
-                Part("Shelter post", new Vector2(2f, -1.1f), new Vector2(0.4f, 2.4f), new Color(0.35f, 0.22f, 0.10f), 4);
+                // ridge pole on two posts
+                Part("Shelter ridge pole", new Vector2(0, 0.2f), PixelArt.Get(Camp, 0, 112, 48, 16), Vector2.zero, 3, false);
+                Part("Shelter post", new Vector2(-1.3f, -0.5f), PixelArt.Get(Camp, 0, 80, 16, 32), Vector2.zero, 3, false);
+                Part("Shelter post", new Vector2(1.3f, -0.5f), PixelArt.Get(Camp, 0, 80, 16, 32), Vector2.zero, 3, false);
                 break;
             case ShelterStage.Roof:
                 if (HasRoof) return;
                 HasRoof = true;
-                var roofColor = tarpRoof ? new Color(0.30f, 0.65f, 0.85f, 0.9f) : new Color(0.10f, 0.40f, 0.15f, 0.95f);
-                Part("Shelter roof", new Vector2(0, -0.9f), new Vector2(4.8f, 2.6f), roofColor, 6);
+                // tarp: the cloth repeated over the frame; boughs: green bushes layered thickly
+                var roof = tarpRoof ? PixelArt.Get(Camp, 128, 80, 32, 32) : PixelArt.Get(Nature, 0, 160, 16, 16);
+                Part("Shelter roof", new Vector2(0, -0.6f), roof, new Vector2(4f, 2f), 4, true);
                 break;
             case ShelterStage.Bedding:
                 if (HasBedding) return;
                 HasBedding = true;
-                Part("Shelter bedding", new Vector2(0, -2.6f), new Vector2(3.6f, 1.4f), new Color(0.28f, 0.55f, 0.22f), 3);
+                Part("Shelter bedding", new Vector2(0, -2.3f), PixelArt.Get("Pixel/Items/Resource/Grass", 0, 0, 0, 0), new Vector2(3f, 1f), 2, true);
                 break;
         }
         if (insideStats != null) Apply(insideStats);
     }
 
-    void Part(string partName, Vector2 offset, Vector2 size, Color color, int order)
+    void Part(string partName, Vector2 offset, Sprite sprite, Vector2 size, int order, bool tiled)
     {
         // The shelter is drawn beside the fire pit (to the right), so it never covers the action objects.
         var go = new GameObject(partName);
         go.transform.SetParent(transform, false);
         go.transform.position = transform.position + new Vector3(5f + offset.x, 1.5f + offset.y, 0);
-        go.transform.localScale = new Vector3(size.x, size.y, 1f);
         var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = partSprite;
-        sr.color = color;
+        sr.sprite = sprite;
         sr.sortingOrder = order;
         if (partMaterial != null) sr.sharedMaterial = partMaterial;
+        if (tiled && sprite != null)
+        {
+            sr.drawMode = SpriteDrawMode.Tiled;
+            sr.tileMode = SpriteTileMode.Continuous;
+            sr.size = size;
+        }
     }
 
     string Progress()

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,13 +33,21 @@ public class SurvivalHUD : MonoBehaviour
     Text[] values = new Text[4];
     Text clockText, itemsText, placeText, promptText, toastText, missionsText;
     Text cardTitle, cardDesc, cardCost, cardNeeds, cardHint, cardControls;
-    Text workingText, endTitle, endDetail, endHint;
+    Text workingText, endTitle, endDetail, endHint, endQuip, endTip;
     GameObject card, working, endPanel, rainLayer;
     RectTransform[] drops = new RectTransform[RainDrops];
     float[] dropSpeed = new float[RainDrops];
-    float toastUntil, bubbleUntil;
+    float toastUntil;
+
+    // Dialogue box (the character's thoughts), typed out letter by letter
+    const float CharsPerSecond = 45f;
     Text bubbleText;
     GameObject bubble;
+    Image arrowImage;
+    readonly Queue<string> dialogueQueue = new Queue<string>();
+    string dialogueText = "";
+    float typedChars, dialogueHoldUntil;
+    bool typing;
     bool missionsDirty = true;
 
     void Start()
@@ -49,7 +58,9 @@ public class SurvivalHUD : MonoBehaviour
         player = FindFirstObjectByType<PlayerController>();
         objectives = ObjectiveManager.Instance;
 
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        // Pixelify Sans (OFL, Resources/Pixel/Ui): a pixel font that stays readable; the plain built-in font if it is missing
+        font = Resources.Load<Font>("Pixel/Ui/PixelifySans");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         BuildUI();
 
         if (actions != null)
@@ -129,21 +140,50 @@ public class SurvivalHUD : MonoBehaviour
             case StatType.Warmth: tip = " Fire, shelter, more layers (look in trees)."; break;
         }
         Toast($"{Labels[(int)type]} is {what}!{tip}");
-        if (level == 2) ShowThought(CriticalThoughts[(int)type]);
     }
-
-    static readonly string[] CriticalThoughts =
-    {
-        "My legs have filed a complaint. It was rejected, like everything else lately.",
-        "Tongue like sandpaper. Funny how a whole stream can feel like a rumour.",
-        "My stomach is composing a farewell speech.",
-        "I can't feel my fingers. At least I can't feel the rest either.",
-    };
 
     void ShowThought(string text)
     {
-        bubbleText.text = "<i>\"" + text + "\"</i>";
-        bubbleUntil = Time.time + 6f;
+        // At most two thoughts wait in line; the oldest one is dropped.
+        dialogueQueue.Enqueue(text);
+        while (dialogueQueue.Count > 2) dialogueQueue.Dequeue();
+    }
+
+    void StartNextDialogue()
+    {
+        dialogueText = dialogueQueue.Dequeue();
+        typedChars = 0f;
+        typing = true;
+        bubbleText.text = "";
+        arrowImage.enabled = false;
+        bubble.SetActive(true);
+    }
+
+    void UpdateDialogue()
+    {
+        if (!bubble.activeSelf)
+        {
+            if (dialogueQueue.Count > 0) StartNextDialogue();
+            return;
+        }
+        if (typing)
+        {
+            typedChars += Time.unscaledDeltaTime * CharsPerSecond;
+            int n = Mathf.Min((int)typedChars, dialogueText.Length);
+            bubbleText.text = dialogueText.Substring(0, n);
+            if (n >= dialogueText.Length)
+            {
+                typing = false;
+                dialogueHoldUntil = Time.time + Mathf.Max(2.5f, dialogueText.Length * 0.04f);
+            }
+            return;
+        }
+        arrowImage.enabled = ((int)(Time.time * 2f) % 2) == 0;   // blinking marker: "done reading"
+        if (Time.time >= dialogueHoldUntil)
+        {
+            if (dialogueQueue.Count > 0) StartNextDialogue();
+            else bubble.SetActive(false);
+        }
     }
 
     void OnObjectivesChanged() => missionsDirty = true;
@@ -196,7 +236,7 @@ public class SurvivalHUD : MonoBehaviour
         promptText.text = showPrompt ? $"[E]  {player.Nearest.ActiveAction.name}" : "";
 
         toastText.gameObject.SetActive(Time.time < toastUntil);
-        bubble.SetActive(Time.time < bubbleUntil);
+        UpdateDialogue();
         UpdateRain();
 
         if (gm != null && gm.State != GameState.Playing)
@@ -209,6 +249,8 @@ public class SurvivalHUD : MonoBehaviour
             }
             endTitle.text = gm.EndTitle;
             endDetail.text = gm.EndDetail;
+            endQuip.text = gm.EndQuip;
+            endTip.text = string.IsNullOrEmpty(gm.EndTip) ? "" : "<b>Real survival tip:</b> " + gm.EndTip;
         }
     }
 
@@ -349,7 +391,7 @@ public class SurvivalHUD : MonoBehaviour
         // Interaction prompt (bottom-center)
         var bottom = new Vector2(0.5f, 0f);
         promptText = MakeText("Prompt", root, "", 34, TextAnchor.MiddleCenter, bottom, bottom,
-                              new Vector2(0, 90), new Vector2(1200, 56), new Color(1f, 0.95f, 0.6f));
+                              new Vector2(0, 270), new Vector2(1200, 56), new Color(1f, 0.95f, 0.6f));
 
         MakeText("Controls", root, "WASD / Arrows: move     E: interact     Esc: cancel     H: hints on/off     R: restart (after the end)",
                  20, TextAnchor.MiddleLeft, Vector2.zero, Vector2.zero, new Vector2(24, 16), new Vector2(1400, 30),
@@ -361,13 +403,20 @@ public class SurvivalHUD : MonoBehaviour
                              new Vector2(0, -150), new Vector2(1400, 60), new Color(1f, 0.95f, 0.6f));
         toastText.gameObject.SetActive(false);
 
-        // Thought bubble (bottom-center, above the prompt): the character's inner voice
-        var bubbleImg = MakeImage("Bubble", root, new Color(0.08f, 0.08f, 0.1f, 0.85f), bottom, new Vector2(0.5f, 0f),
-                                  new Vector2(0, 150), new Vector2(1300, 110));
+        // Dialogue box (bottom of the screen, like a classic 2D RPG): the character's inner voice, typed out letter by letter
+        var bubbleImg = MakeImage("Dialogue", root, Color.white, bottom, new Vector2(0.5f, 0f), new Vector2(0, 28), new Vector2(1560, 210));
+        bubbleImg.sprite = PixelUI.Box();
+        bubbleImg.type = Image.Type.Sliced;
+        bubbleImg.pixelsPerUnitMultiplier = 6f;
         bubble = bubbleImg.gameObject;
-        bubbleText = MakeText("BubbleText", bubble.transform, "", 32, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                              Vector2.zero, new Vector2(1240, 100), new Color(0.85f, 0.88f, 1f));
-        bubbleText.fontStyle = FontStyle.Italic;
+        bubbleText = MakeText("DialogueText", bubble.transform, "", 40, TextAnchor.UpperLeft, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                              new Vector2(0, 4), new Vector2(1470, 150), PixelUI.Dark);
+        Destroy(bubbleText.GetComponent<Outline>());   // dark text on a light box needs no outline
+        var arrowGo = NewRect("DialogueArrow", bubble.transform);
+        Place(arrowGo, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-36, 26), new Vector2(34, 34));
+        arrowImage = arrowGo.gameObject.AddComponent<Image>();
+        arrowImage.sprite = PixelUI.Arrow();
+        arrowImage.raycastTarget = false;
         bubble.SetActive(false);
 
         // Action preview card (center)
@@ -396,7 +445,10 @@ public class SurvivalHUD : MonoBehaviour
         endPanel = end.gameObject;
         endTitle = MakeText("EndTitle", endPanel.transform, "", 64, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, 60), new Vector2(1500, 100), Color.white);
         endDetail = MakeText("EndDetail", endPanel.transform, "", 34, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, -20), new Vector2(1500, 60), new Color(0.9f, 0.9f, 0.9f));
-        endHint = MakeText("EndHint", endPanel.transform, "Press R to try again", 30, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, -110), new Vector2(1500, 50), new Color(1f, 0.95f, 0.6f));
+        endQuip = MakeText("EndQuip", endPanel.transform, "", 34, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, -105), new Vector2(1400, 110), new Color(0.85f, 0.88f, 1f));
+        endQuip.fontStyle = FontStyle.Italic;
+        endTip = MakeText("EndTip", endPanel.transform, "", 28, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, -215), new Vector2(1400, 110), new Color(0.6f, 0.95f, 0.6f));
+        endHint = MakeText("EndHint", endPanel.transform, "Press R to try again", 30, TextAnchor.MiddleCenter, mid, mid, new Vector2(0, -330), new Vector2(1500, 50), new Color(1f, 0.95f, 0.6f));
         endPanel.SetActive(false);
     }
 
@@ -461,7 +513,7 @@ public class SurvivalHUD : MonoBehaviour
         var t = r.gameObject.AddComponent<Text>();
         t.font = font;
         t.text = content;
-        t.fontSize = fontSize;
+        t.fontSize = Mathf.RoundToInt(fontSize * 1.12f);   // Pixelify Sans looks a bit smaller than the plain font
         t.alignment = align;
         t.color = color;
         t.supportRichText = true;

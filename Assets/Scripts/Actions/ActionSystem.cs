@@ -22,6 +22,8 @@ public class ActionSystem : MonoBehaviour
     public event Action<string> Message;
     /// <summary>A thought bubble (the character's inner voice).</summary>
     public event Action<string> Thought;
+    /// <summary>The player tried an action that is not possible (missing item, wrong conditions).</summary>
+    public event Action Refused;
 
     SurvivalStats stats;
     GameClock clock;
@@ -91,6 +93,7 @@ public class ActionSystem : MonoBehaviour
         if (MissingHint != null)
         {
             Message?.Invoke(MissingHint);
+            Refused?.Invoke();
             Close();
             return;
         }

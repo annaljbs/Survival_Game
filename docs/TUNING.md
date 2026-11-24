@@ -2,6 +2,8 @@
 
 Everything below is editable in the Unity **Inspector**. No code needed.
 
+> **Level design by hand:** see `docs/LEVEL_EDITING.md`. The sections below about the generator (`GreyboxSceneBuilder`) describe the old generated test level (`landscape.unity`). In the hand-made `Level.unity` you change objects and tiles directly in Unity; the Inspector values (costs, drain, rain, ...) are the same.
+
 ## Golden rules
 
 1. **Change values while the game is stopped.** Edits made in Play mode are lost when you press Stop.
@@ -151,6 +153,51 @@ Work in the Unity Editor and development builds only (`Assets/Scripts/Core/Debug
 | **0** | Hide or show the key panel |
 
 Quick test of the ending: 1, then 6, build a signal fire, press 4 (or skip hours with 2) until 08:00 to 16:00, then "Wait for rescue".
+
+## Sound, fire effects and custom art
+
+| What | Where |
+|---|---|
+| Sound and music | `Assets/Scripts/Core/AudioDirector.cs` (creates itself, no scene setup). Inspector fields appear on the `AudioDirector` object while playing; defaults: ambience 0.5, music 0.35, sound effects 0.7. **M** mutes everything |
+| What plays when | Wind always (louder at night); rain while it rains; river near the stream (x = 57); **fire crackling near a lit fire: currently no sound file** (the pack's one was removed, see below); music "Clearing" by day, "Dark Forest" at night, "Tension" while any bar is critical; short sounds for pickups (coin), finished actions, refused actions and bar warnings |
+| Files | `Assets/Resources/Pixel/Audio/` (14 MB). To swap a sound, replace the file with the same name. **Fire sound:** put your own looping file at `Assets/Resources/Pixel/Audio/Ambient/Fire.wav` (or .ogg/.mp3, name `Fire`): it plays by itself, louder the closer you are to a lit fire. Without the file the fire is silent |
+| Flame and smoke at the fire pit | `CampfireVisual` on each fire pit (flame flickers, shrinks when under 30 minutes are left, smoke puffs rise) |
+| Shelter parts | Drawn by `ShelterZone.Build` from camp tiles: ridge pole and posts (frame), tarp cloth or layered bush (roof), grass (bed) |
+| Plane wreck | `Assets/Resources/Pixel/Custom/PlaneWreck.png`, placed in `BuildCrashSite` of the builder |
+
+## Art (pixel art from the free Ninja Adventure pack)
+
+The pictures are in `Assets/Resources/Pixel/` (CC0, see `docs/CREDITS.md`). They are put onto the coloured squares **when the game starts** (Play mode), so the Scene view in the editor still shows plain squares and dark forest blocks.
+
+| What | Where it is decided |
+|---|---|
+| Ground (grass, dirt paths) and the 32x32 trees | `Assets/Scripts/World/MapPainter.cs`, using the shape of the map in `Assets/Scripts/World/MapData.cs` (clearings, paths). Changing `MapData` and rebuilding the scene changes walls and pictures together |
+| Picture for each object (bag, book, tarp, camp pit, ...) | `ApplyIcon` in `Assets/Editor/GreyboxSceneBuilder.cs`. Item icons: `Icon(go, "Object/Bag")`, parts of a tileset: `Region(go, path, x, y, w, h)` (pixels from the top-left, 16 pixels = 1 unit) |
+| Player (walking animation, 4 directions) | `PixelCharacter` on the Player, sheet `Pixel/Characters/Hunter`. To use another character, change `Resource` (all sheets in the pack have the same layout) |
+| Font | `Resources/Pixel/Ui/PixelifySans` (OFL) is used by the HUD and the camp name labels. The pack's own font had almost no space between words. Sizes are scaled x1.12 in `MakeText` of `SurvivalHUD.cs` |
+| Camera | `CameraFollow` adds a **pixel-perfect camera** (16 pixels per unit, 320x180 reference = about 20 x 11 tiles): art pixels always map to whole screen pixels, so nothing shimmers. To see more or less of the map, change the reference size in `CameraFollow.Awake` |
+| Trees | `MapPainter.PaintTrees`: one tree or bush per forest cell, slightly shifted and mirrored at random, on the same grass as the ground (the dark placeholder blocks are hidden by `HideAtPlay`) |
+| Dialogue box | Drawn in code (`PixelUI.cs`) in the style of classic RPGs |
+
+Textures are kept sharp automatically (`Assets/Editor/PixelImportFixer.cs`: no compression, point filter). If a picture is missing, the coloured square stays.
+
+## Thought bubbles and end screens
+
+Object: `GREYBOX > Systems` → component **ThoughtDirector** (it decides *when*; the words are in `Assets/Scripts/UI/ThoughtLibrary.cs`, about 110 lines in pools).
+
+| Field | Now | Meaning |
+|---|---|---|
+| Min Seconds Between Random | 14 | Cooldown for flavour bubbles (gathering, walking, idling, ...). Raise it for fewer bubbles |
+| Idle Seconds | 25 | Standing still this long (real seconds) triggers a comment |
+| Walk Units Per Comment | 90 | Distance walked before a walking comment |
+| Chance After Gather | 0.35 | Chance of a comment after picking up material |
+| Chance When Refused | 0.6 | Chance of a comment when an action is not possible |
+
+**Always shown (ignore the cooldown):** phone checks (4 fixed lines in order, then random), mission completed, a bar getting low or critical, fire, shelter parts, sleeping, climbing, signals, rain without a roof, flooded or cosy shelter, wet clothes, sunset / midnight / 3 a.m. / sunrise / day-2 noon / day-2 sunset, river, fire dying.
+**Flavour (cooldown):** gathering, searching, walking, idling, entering a camp site for the first time, thick trail, junk x3 and x6, refused actions.
+An action's own `Thought` (set on the action) wins over the generic pool. A line is never repeated before its pool is used up. To add jokes: add lines to a pool in `ThoughtLibrary.cs` (no scene rebuild needed).
+
+**End screens:** a sarcastic line and one **real survival tip** under the result, chosen in `GameManager.ChooseQuipAndTip` from the cause and what you did: ate unknown berries, drank straight from the stream (`drank_stream`), never built a fire, soaked by rain without a roof (`rain_exposed`), or the plain cause. The win screen has its own line and tip. These replace the old in-game hints as the place where the game teaches.
 
 ## Hints (help texts)
 

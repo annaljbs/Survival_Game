@@ -13,16 +13,45 @@ public static class GreyboxSceneBuilder
 {
     const string ArtDir = "Assets/Art/Placeholder";
     const string RootName = "GREYBOX";
-    const float HalfW = 120f, HalfH = 90f;
+    const float HalfW = MapData.HalfW, HalfH = MapData.HalfH;
 
     static Sprite square;
     static Material litMaterial;
+    static Material unlitMaterial;   // for flames and smoke (they glow at night)
+
+    /// <summary>True while Survival > Make Level Editable generates the level: no run-time forest, the tilemaps are painted for real.</summary>
+    public static bool EditableMode { get; private set; }
+    public static Material LitMaterial => litMaterial;
 
     [MenuItem("Survival/Build Greybox Scene")]
     public static void Build()
     {
+        // Safety: the hand-made level must never be deleted by this generator.
+        string active = EditorSceneManager.GetActiveScene().path;
+        if (active.EndsWith("Level.unity"))
+        {
+            EditorUtility.DisplayDialog("Stop: this is your hand-made level",
+                "Build Greybox Scene would replace the objects of the open scene. Level.unity is the level you edit by hand, so it is protected. " +
+                "Open Assets/Scenes/landscape.unity if you really want the generated test level.", "OK");
+            return;
+        }
+        Generate();
+        SaveScene();
+    }
+
+    /// <summary>Generates the level into the open scene without saving it, ready to be turned into a hand-editable scene.</summary>
+    public static void GenerateForEditing()
+    {
+        EditableMode = true;
+        try { Generate(); }
+        finally { EditableMode = false; }
+    }
+
+    static void Generate()
+    {
         square = EnsureSprite();
         litMaterial = EnsureMaterial();
+        unlitMaterial = EnsureUnlitMaterial();
 
         var old = GameObject.Find(RootName);
         if (old != null) Object.DestroyImmediate(old);
@@ -48,12 +77,14 @@ public static class GreyboxSceneBuilder
         player.AddComponent<SurvivalStats>();
         player.AddComponent<Inventory>();
         player.AddComponent<PlayerController>();
+        player.AddComponent<PixelCharacter>();
 
         // --- Systems ---
         var systems = new GameObject("Systems");
         systems.transform.SetParent(root, false);
         systems.AddComponent<WorldState>();
         systems.AddComponent<FindsScatter>();
+        systems.AddComponent<ThoughtDirector>();
         systems.AddComponent<GameClock>();
         systems.AddComponent<Weather>();
         systems.AddComponent<ObjectiveManager>();
@@ -62,7 +93,6 @@ public static class GreyboxSceneBuilder
         systems.AddComponent<SurvivalHUD>();
 
         SetupCameraAndLight(player.transform);
-        SaveScene();
     }
 
     // ------------------------------------------------------------------ terrain
@@ -71,16 +101,24 @@ public static class GreyboxSceneBuilder
     {
         // The map is large on purpose: key places are far apart and mostly off-screen
         // (camera sees about 21 x 12 units), so players have to explore and remember landmarks.
-        Box("Ground", root, Vector2.zero, new Vector2(HalfW * 2, HalfH * 2), new Color(0.30f, 0.45f, 0.26f), -50);
+        // Plain grass over the whole map; paths and trees are painted on top.
+        // One picture of 240 x 180 tiles is too big for Unity (too many corners), so the ground is made of 40 x 30 pieces.
+        var ground = new GameObject("Ground").transform;
+        ground.SetParent(root, false);
+        const float pieceW = 40f, pieceH = 30f;
+        for (float gx = -HalfW; gx < HalfW - 0.01f; gx += pieceW)
+            for (float gy = -HalfH; gy < HalfH - 0.01f; gy += pieceH)
+                Tile(Box("Ground piece", ground, new Vector2(gx + pieceW / 2f, gy + pieceH / 2f), new Vector2(pieceW, pieceH),
+                         new Color(0.30f, 0.45f, 0.26f), -50), FloorPath, 0, 192);
         Wall(root, new Vector2(0, HalfH), new Vector2(HalfW * 2, 2));
         Wall(root, new Vector2(0, -HalfH), new Vector2(HalfW * 2, 2));
         Wall(root, new Vector2(HalfW, 0), new Vector2(2, HalfH * 2));
         Wall(root, new Vector2(-HalfW, 0), new Vector2(2, HalfH * 2));
 
         // Landmarks (solid, big, easy to recognise and remember)
-        Solid("Landmark: big rock", root, new Vector2(30, -35), new Vector2(7, 7), new Color(0.40f, 0.40f, 0.44f));
-        Solid("Landmark: lake", root, new Vector2(-70, -30), new Vector2(30, 20), new Color(0.15f, 0.35f, 0.70f));
-        Solid("Landmark: hill", root, new Vector2(70, -20), new Vector2(18, 12), new Color(0.45f, 0.32f, 0.20f));
+        Region(Solid("Landmark: big rock", root, new Vector2(30, -35), new Vector2(7, 7), new Color(0.40f, 0.40f, 0.44f)), NaturePath, 272, 160, 64, 48, 8f, 6f);
+        Tile(Solid("Landmark: lake", root, new Vector2(-70, -30), new Vector2(30, 20), new Color(0.15f, 0.35f, 0.70f)), WaterPath, 16, 16);
+        Tile(Solid("Landmark: hill", root, new Vector2(70, -20), new Vector2(18, 12), new Color(0.45f, 0.32f, 0.20f)), FloorPath, 128, 144);
 
         // Rock plateau for the overhang camp, outside the normal map: reached by climbing.
         Box("Plateau ground", root, new Vector2(170, 0), new Vector2(30, 20), new Color(0.38f, 0.36f, 0.34f), -45);
@@ -93,7 +131,7 @@ public static class GreyboxSceneBuilder
     static void BuildWater(Transform root)
     {
         // The stream is a long band you can walk through (decor only).
-        Box("Stream (water)", root, new Vector2(57, 20), new Vector2(5, 70), new Color(0.15f, 0.40f, 0.85f), -20);
+        Tile(Box("Stream (water)", root, new Vector2(57, 20), new Vector2(5, 70), new Color(0.15f, 0.40f, 0.85f), -20), WaterPath, 16, 16);
         Color waterBlue = new Color(0.35f, 0.65f, 1f);
 
         Interact(root, "Stream: fill bottle", new Vector2(52, 26), new Vector2(3f, 3f), waterBlue, new ActionData
@@ -110,7 +148,7 @@ public static class GreyboxSceneBuilder
         });
         Interact(root, "Stream: drink", new Vector2(52, 14), new Vector2(3f, 3f), waterBlue, new ActionData
         {
-            name = "Drink straight from the stream", minutes = 5, energyDelta = -15, waterDelta = 30, oneShot = false,
+            name = "Drink straight from the stream", minutes = 5, energyDelta = -15, waterDelta = 30, oneShot = false, milestone = "drank_stream",
             description = "You are thirsty. But untreated water can make you sick.",
             reason = "Risk: stomach trouble costs energy",
             resultText = "That felt great... for a minute. Your stomach disagrees.",
@@ -121,6 +159,9 @@ public static class GreyboxSceneBuilder
 
     static void BuildCrashSite(Transform root)
     {
+        // The wrecked plane (custom pixel art in the style of the pack, no collider: you can walk over the debris)
+        Region(Box("Plane wreck", root, new Vector2(-14, 4), new Vector2(8, 4), new Color(0.8f, 0.8f, 0.85f), 3), "Pixel/Custom/PlaneWreck", 0, 0, 0, 0, 8f, 4f);
+
         Interact(root, "Phone", new Vector2(2.5f, 0), new Vector2(0.7f, 1.1f), new Color(0.1f, 0.1f, 0.12f), new ActionData
         {
             name = "Check your phone", minutes = 5, energyDelta = -1, oneShot = false,
@@ -128,7 +169,6 @@ public static class GreyboxSceneBuilder
             reason = "Holding it up to the sky",
             milestone = "phone_checked",
             resultText = "No signal. Of course. Maybe stop refreshing it.",
-            thought = "\"Emergency calls only\" is a lie. Nobody is picking up that call either.",
         });
         Interact(root, "Luggage", new Vector2(-9, 5), new Vector2(1.4f, 1f), new Color(0.55f, 0.35f, 0.2f), new ActionData
         {
@@ -352,7 +392,9 @@ public static class GreyboxSceneBuilder
         Label(root, siteName, c + new Vector2(0, -5.6f));
 
         var pit = Box("Fire pit: " + name, root, c, new Vector2(1.6f, 1.6f), new Color(0.25f, 0.2f, 0.18f), 5);
+        Region(pit, CampPath, 160, 48, 32, 32, 2f, 2f);
         var fire = pit.AddComponent<Campfire>();
+        pit.AddComponent<CampfireVisual>().unlitMaterial = unlitMaterial;
 
         Color tool = new Color(0.95f, 0.55f, 0.2f);
         Interact(root, name + ": build fire", c + new Vector2(-2.4f, 1.8f), new Vector2(1.2f, 1.2f), tool, new ActionData
@@ -456,7 +498,8 @@ public static class GreyboxSceneBuilder
         go.transform.SetParent(root, false);
         go.transform.position = pos;
         var tm = go.AddComponent<TextMesh>();
-        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var font = Resources.Load<Font>("Pixel/Ui/PixelifySans");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         tm.font = font;
         tm.text = text;
         tm.fontSize = 48;
@@ -556,13 +599,13 @@ public static class GreyboxSceneBuilder
                "Pretty. Red. Pretty red is never a good sign. And I ate them anyway.",
                food: 5, water: -15, energy: -15,
                result: "Never eat plants you cannot identify. Your stomach disagrees violently.",
-               reason: "Risk: stomach trouble");
+               reason: "Risk: stomach trouble", milestone: "ate_berries");
         Pickup(root, "Red berries", new Vector2(42, 50), berry, "Eat the unknown berries",
                "You don't know what these are. Red and pretty: exactly how poisonous plants like to look.",
                "Pretty. Red. Pretty red is never a good sign. And I ate them anyway.",
                food: 5, water: -15, energy: -15,
                result: "Never eat plants you cannot identify. Your stomach disagrees violently.",
-               reason: "Risk: stomach trouble");
+               reason: "Risk: stomach trouble", milestone: "ate_berries");
     }
 
     /// <summary>A tree with a piece of clothing caught in it (a coloured scrap shows at the top). Climbing costs energy.</summary>
@@ -577,6 +620,7 @@ public static class GreyboxSceneBuilder
             grants = new[] { Give(item) }, exposureFactor = exposure, resultText = result, thought = thought,
         };
         var tree = Interact(root, name, pos, new Vector2(1.4f, 2.6f), new Color(0.06f, 0.30f, 0.15f), action);
+        Region(tree.gameObject, NaturePath, 0, 0, 32, 32);
         var find = tree.gameObject.AddComponent<RandomFind>();
         find.inTree = true;
         find.attached = scrap.transform;
@@ -595,16 +639,18 @@ public static class GreyboxSceneBuilder
 
     static void Pickup(Transform root, string name, Vector2 pos, Color color, string actionName, string description, string thought,
                        ItemType item = ItemType.None, float food = 0f, float water = 0f, float warmth = 0f,
-                       float energy = -1f, float exposure = 1f, string result = "", string reason = "A short stop")
+                       float energy = -1f, float exposure = 1f, string result = "", string reason = "A short stop", string milestone = "")
     {
         var action = new ActionData
         {
             name = actionName, minutes = 3, energyDelta = energy, foodDelta = food, waterDelta = water, warmthDelta = warmth,
             description = description, reason = reason, exposureFactor = exposure,
-            resultText = result, thought = thought,
+            resultText = result, thought = thought, milestone = milestone,
         };
         if (item != ItemType.None) action.grants = new[] { Give(item) };
         var pickup = Interact(root, name, pos, new Vector2(0.9f, 0.9f), color, action);
+        if (name == "Red berries") Region(pickup.gameObject, NaturePath, 48, 176, 16, 16);
+        else Icon(pickup.gameObject, "Treasure/SilverCoin");   // something shiny on the path
         pickup.gameObject.AddComponent<RandomFind>().inTree = false;
         Spot(root, pos, false);
     }
@@ -671,7 +717,7 @@ public static class GreyboxSceneBuilder
     static void BuildTerrainZones(Transform root)
     {
         // Cold river: the northern stretch of the stream road. Wading chills you and soaks your clothes.
-        Box("River (cold section)", root, new Vector2(57, 42f), new Vector2(8, 8), new Color(0.10f, 0.30f, 0.75f), -19);
+        Tile(Box("River (cold section)", root, new Vector2(57, 42f), new Vector2(8, 8), new Color(0.10f, 0.30f, 0.75f), -19), WaterPath, 16, 16);
         var river = new GameObject("Terrain: River");
         river.transform.SetParent(root, false);
         river.transform.position = new Vector2(57, 42f);
@@ -712,70 +758,37 @@ public static class GreyboxSceneBuilder
         }
     }
 
-    // ------------------------------------------------------------------ forest, paths, map edge
+    // ------------------------------------------------------------------ forest (walls)
 
-    const float Cell = 3f;            // size of one forest block
-    const float PathHalfWidth = 3.5f; // paths are about 7 units wide (the camera shows 21 x 12)
-    const float EdgeBand = 9f;        // forest wall thickness at the map edge (always solid)
-
-    // Open areas (center, half size). Everything outside these and the paths is solid forest.
-    static readonly Rect[] Clearings =
-    {
-        new Rect(-27, -21, 50, 34),     // crash site
-        new Rect(30, -4, 24, 34),       // meadow by the stream (camp A, dry grass, stream)
-        new Rect(-21, 33, 34, 22),      // forest edge (camp B, dead twigs)
-        new Rect(-34, 43, 20, 16),      // log field
-        new Rect(-90, 21, 16, 14),      // birch grove
-        new Rect(61, -16, 18, 12),      // foot of the hill (climb up)
-        new Rect(90, 62, 16, 16),       // rescue point (far north-east)
-        new Rect(-14, 16, 20, 14),      // camp D2 (open ground on the way north)
-    };
-
-    // The forest shortcut to the rescue point: shorter than the other routes, but slow and tiring (TerrainZone).
-    static readonly Vector2[] TrailThick = { new Vector2(50, 28), new Vector2(72, 40), new Vector2(88, 56), new Vector2(96, 66) };
-
-    // Paths: polylines of waypoints. They are drawn as brown dirt roads and kept free of trees.
-    static readonly Vector2[][] Paths =
-    {
-        new[] { new Vector2(20, -2), new Vector2(32, 4) },                                              // crash site <-> meadow
-        new[] { new Vector2(0, 10), new Vector2(-2, 24), new Vector2(-4, 34) },                         // crash site -> north
-        new[] { new Vector2(-24, -4), new Vector2(-45, 6), new Vector2(-62, 18), new Vector2(-76, 25) },// crash site -> birch grove
-        new[] { new Vector2(50, 0), new Vector2(58, -8), new Vector2(64, -9) },                         // meadow -> hill
-        new[] { new Vector2(57, -14), new Vector2(57, 56) },                                            // along the stream (north-south)
-        new[] { new Vector2(57, 50), new Vector2(57, 70), new Vector2(90, 70) },                        // stream -> rescue point
-        new[] { new Vector2(12, 46), new Vector2(30, 50), new Vector2(50, 50), new Vector2(57, 50) },   // forest edge -> stream (long way round)
-        new[] { new Vector2(-22, -16), new Vector2(-40, -24), new Vector2(-54, -28) },                  // dead end to the lake
-        new[] { new Vector2(12, -20), new Vector2(24, -30) },                                           // dead end to the big rock
-        TrailThick,                                                                                     // forest shortcut to the rescue point
-    };
+    const float Cell = MapData.Cell;
+    static Vector2[] TrailThick => MapData.TrailThick;
 
     static void BuildForest(Transform root)
     {
-        // 1) Brown dirt roads along the paths (decor).
-        foreach (var path in Paths)
-        {
-            for (int i = 0; i < path.Length - 1; i++)
-            {
-                Vector2 a = path[i], b = path[i + 1];
-                Vector2 mid = (a + b) / 2f;
-                float len = Vector2.Distance(a, b) + PathHalfWidth;
-                var road = Box("Path", root, mid, new Vector2(len, PathHalfWidth * 1.6f), new Color(0.52f, 0.42f, 0.27f), -40);
-                road.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(b.y - a.y, b.x - a.x) * Mathf.Rad2Deg);
-            }
-        }
-
-        // 2) Solid forest: walk a grid, block every cell that is not open, merge neighbours in a row.
+        if (EditableMode) return;   // the editable level has painted tilemaps with their own colliders instead
+        // Solid forest: walk the map grid, block every cell that is not open (see MapData), merge neighbours
+        // in a row into one dark block with a collider. The pixel-art ground and trees are painted at run time
+        // by MapPainter from the same MapData.
         int cols = Mathf.RoundToInt(HalfW * 2 / Cell);
         int rows = Mathf.RoundToInt(HalfH * 2 / Cell);
-        var rng = new System.Random(7);   // fixed seed: the map is always the same
-        int blocks = 0, treeSprites = 0;
+        int blocks = 0;
+
+        // One merged collider for the whole forest (CompositeCollider2D): no seams between the blocks,
+        // so the player slides smoothly along tree walls instead of catching on invisible corners.
+        var walls = new GameObject("Forest walls");
+        walls.transform.SetParent(root, false);
+        var wallsBody = walls.AddComponent<Rigidbody2D>();
+        wallsBody.bodyType = RigidbodyType2D.Static;
+        var composite = walls.AddComponent<CompositeCollider2D>();
+        composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+        composite.generationType = CompositeCollider2D.GenerationType.Synchronous;
 
         for (int j = 0; j < rows; j++)
         {
             int runStart = -1;
             for (int i = 0; i <= cols; i++)
             {
-                bool blocked = i < cols && IsBlocked(CellCenter(i, j));
+                bool blocked = i < cols && MapData.IsBlocked(MapData.CellCenter(i, j));
                 if (blocked && runStart < 0) runStart = i;
                 if (!blocked && runStart >= 0)
                 {
@@ -783,55 +796,80 @@ public static class GreyboxSceneBuilder
                     float x = -HalfW + Cell * (runStart + len / 2f);
                     float y = -HalfH + Cell * (j + 0.5f);
                     var block = Box("Forest", root, new Vector2(x, y), new Vector2(Cell * len, Cell), new Color(0.07f, 0.18f, 0.09f), 0);
-                    block.AddComponent<BoxCollider2D>();
+                    block.AddComponent<BoxCollider2D>().compositeOperation = Collider2D.CompositeOperation.Merge;
+                    block.transform.SetParent(walls.transform, true);
+                    block.AddComponent<HideAtPlay>();   // the painted trees and the grass underneath replace this dark block
                     blocks++;
                     runStart = -1;
                 }
             }
         }
 
-        // 3) Tree sprites on top of the forest (no collision). Denser along the path edges so the way is easy to read.
-        for (int j = 0; j < rows; j++)
-        {
-            for (int i = 0; i < cols; i++)
-            {
-                Vector2 c = CellCenter(i, j);
-                if (!IsBlocked(c)) continue;
-                bool nearOpen = !IsBlocked(c + Vector2.right * Cell) || !IsBlocked(c + Vector2.left * Cell) ||
-                                !IsBlocked(c + Vector2.up * Cell) || !IsBlocked(c + Vector2.down * Cell);
-                if (rng.NextDouble() > (nearOpen ? 0.95 : 0.30)) continue;
-                float size = 2.2f + (float)rng.NextDouble() * 1.0f;
-                float shade = (float)rng.NextDouble();
-                var color = new Color(0.10f + 0.06f * shade, 0.28f + 0.14f * shade, 0.12f + 0.06f * shade);
-                var offset = new Vector2((float)(rng.NextDouble() - 0.5) * 1.2f, (float)(rng.NextDouble() - 0.5) * 1.2f);
-                Box("Tree", root, c + offset, new Vector2(size, size), color, 2);
-                treeSprites++;
-            }
-        }
-        Debug.Log($"Forest built: {blocks} solid blocks, {treeSprites} tree sprites.");
+        var painter = new GameObject("Map visuals (painted at run time)");
+        painter.transform.SetParent(root, false);
+        painter.AddComponent<MapPainter>().material = litMaterial;
+        Debug.Log($"Forest built: {blocks} solid blocks.");
     }
 
-    static Vector2 CellCenter(int i, int j)
+    // ------------------------------------------------------------------ pixel art (applied when the game starts, see PixelSkin)
+
+    const string ItemsPath = "Pixel/Items/";
+    const string NaturePath = "Pixel/Tilesets/TilesetNature";
+    const string CampPath = "Pixel/Tilesets/tileset_camp";
+    const string FloorPath = "Pixel/Tilesets/TilesetFloor";
+    const string WaterPath = "Pixel/Tilesets/TilesetWater";
+
+    /// <summary>The whole picture of an item icon, e.g. "Object/Bag".</summary>
+    static void Icon(GameObject go, string item) => Region(go, ItemsPath + item, 0, 0, 0, 0);
+
+    /// <summary>A rectangle (pixels from the top-left) of a picture. Size 0 = natural size.</summary>
+    static void Region(GameObject go, string resource, int x, int y, int w, int h, float sizeX = 0f, float sizeY = 0f)
     {
-        return new Vector2(-HalfW + Cell * (i + 0.5f), -HalfH + Cell * (j + 0.5f));
+        var skin = go.AddComponent<PixelSkin>();
+        skin.resource = resource;
+        skin.x = x; skin.y = y; skin.w = w; skin.h = h;
+        skin.size = new Vector2(sizeX, sizeY);
     }
 
-    /// <summary>True if this spot is solid forest (not a clearing, not a path, or part of the map-edge wall).</summary>
-    static bool IsBlocked(Vector2 p)
+    /// <summary>One 16x16 tile repeated over the whole object (ground, water).</summary>
+    static void Tile(GameObject go, string resource, int x, int y)
     {
-        if (Mathf.Abs(p.x) > HalfW - EdgeBand || Mathf.Abs(p.y) > HalfH - EdgeBand) return true;
-        foreach (var r in Clearings) if (r.Contains(p)) return false;
-        foreach (var path in Paths)
-            for (int i = 0; i < path.Length - 1; i++)
-                if (DistanceToSegment(p, path[i], path[i + 1]) <= PathHalfWidth) return false;
-        return true;
+        var skin = go.AddComponent<PixelSkin>();
+        skin.resource = resource;
+        skin.x = x; skin.y = y; skin.w = 16; skin.h = 16;
+        skin.tiled = true;
     }
 
-    static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+    /// <summary>Picks the picture for a world object from its name.</summary>
+    static void ApplyIcon(GameObject go, string name)
     {
-        Vector2 ab = b - a;
-        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
-        return Vector2.Distance(p, a + ab * t);
+        if (name == "Phone") Icon(go, "Other/Letter");
+        else if (name == "Luggage") Icon(go, "Object/CrateEmpty");
+        else if (name == "Seats") Region(go, CampPath, 0, 112, 48, 16);
+        else if (name == "Backpack") Icon(go, "Object/Bag");
+        else if (name == "Tarp" || name == "Signal tarp") Region(go, CampPath, 128, 80, 32, 32);
+        else if (name == "Handbook") Icon(go, "Object/Book");
+        else if (name == "Magazines") Icon(go, "Other/Letter2");
+        else if (name == "Snack trolley") Icon(go, "Food/Onigiri");
+        else if (name == "Stream: fill bottle" || name == "Stream: drink") Icon(go, "Resource/Water");
+        else if (name == "Green bush") Region(go, NaturePath, 0, 160, 16, 16);
+        else if (name == "Dry grass") Icon(go, "Resource/Grass");
+        else if (name == "Dead twigs") Icon(go, "Resource/Branch");
+        else if (name == "Fallen log") Region(go, CampPath, 0, 0, 32, 16);
+        else if (name == "Birch tree") Region(go, NaturePath, 192, 0, 32, 32);
+        else if (name == "Spruce tree") Region(go, NaturePath, 32, 0, 32, 32);
+        else if (name == "Climb up" || name == "Climb down") Icon(go, "Tool/Pickaxe");
+        else if (name.EndsWith(": build fire") || name.EndsWith(": add logs")) Icon(go, "Resource/Branch");
+        else if (name.EndsWith(": boil water")) Region(go, CampPath, 96, 48, 16, 16);
+        else if (name.EndsWith(": drink")) Icon(go, "Potion/WaterPot");
+        else if (name.EndsWith(": sleep")) Region(go, CampPath, 0, 48, 32, 32);
+        else if (name.EndsWith(": frame")) Icon(go, "Weapons/Stick/Sprite");
+        else if (name.EndsWith(": roof (tarp)")) Region(go, CampPath, 128, 80, 32, 32);
+        else if (name.EndsWith(": roof (boughs)")) Region(go, NaturePath, 0, 160, 16, 16);
+        else if (name.EndsWith(": bedding")) Icon(go, "Resource/Grass");
+        else if (name == "Signal fire") Region(go, CampPath, 160, 48, 32, 32);
+        else if (name == "Whistle signal") Icon(go, "Object/PanFlute");
+        else if (name == "Wait for rescue") Icon(go, "Object/Hourglass");
     }
 
     // ------------------------------------------------------------------ small helpers
@@ -860,10 +898,11 @@ public static class GreyboxSceneBuilder
         return go;
     }
 
-    static void Solid(string name, Transform parent, Vector2 pos, Vector2 size, Color color)
+    static GameObject Solid(string name, Transform parent, Vector2 pos, Vector2 size, Color color)
     {
         var go = Box(name, parent, pos, size, color, 3);   // drawn above the forest so landmarks stay visible
         go.AddComponent<BoxCollider2D>();
+        return go;
     }
 
     static void Wall(Transform parent, Vector2 pos, Vector2 size)
@@ -899,6 +938,7 @@ public static class GreyboxSceneBuilder
         item.fire = fire;
         item.moveTo = moveTo;
         item.zone = zone;
+        ApplyIcon(go, name);
         return item;
     }
 
@@ -977,6 +1017,19 @@ public static class GreyboxSceneBuilder
             importer.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    static Material EnsureUnlitMaterial()
+    {
+        string path = ArtDir + "/SpriteUnlit.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat != null) return mat;
+
+        var shader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (shader == null) return null;
+        mat = new Material(shader);
+        AssetDatabase.CreateAsset(mat, path);
+        return mat;
     }
 
     static Material EnsureMaterial()

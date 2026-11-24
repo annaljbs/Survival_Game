@@ -1,21 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>A possible place for a find (on the ground along a path, or in a tree).</summary>
-public class FindSpot : MonoBehaviour
-{
-    public bool inTree;
-}
-
-/// <summary>Something you can find (junk, useful items, clothes). It is moved to a random matching spot each run.</summary>
-public class RandomFind : MonoBehaviour
-{
-    public bool inTree;
-    [Tooltip("A decoration that moves with it (the cloth scrap in a tree).")]
-    public Transform attached;
-    public Vector3 attachedOffset;
-}
-
 /// <summary>
 /// At the start of every run: shuffles all RandomFind objects onto the FindSpots (ground finds onto
 /// ground spots, tree finds onto tree spots). There are more spots than finds, so every run looks different.
