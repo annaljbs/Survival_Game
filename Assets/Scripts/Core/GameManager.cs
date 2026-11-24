@@ -4,15 +4,16 @@ using UnityEngine.SceneManagement;
 
 public enum GameState { Playing, Won, Lost }
 
-/// <summary>Win = survive N days. Lose = die. R restarts.</summary>
+/// <summary>Playing / Won / Lost. R restarts the scene.</summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    public int daysToSurvive = 7;
-    public SurvivalStats stats;
-
     public GameState State { get; private set; } = GameState.Playing;
+    public string EndTitle { get; private set; } = "";
+    public string EndDetail { get; private set; } = "";
+
+    SurvivalStats stats;
 
     void Awake()
     {
@@ -20,26 +21,42 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    void Update()
+    void Start()
     {
-        if (State == GameState.Playing)
-        {
-            if (stats != null && stats.IsDead) State = GameState.Lost;
-            else if (DayNightCycle.Instance != null && DayNightCycle.Instance.DayCount > daysToSurvive)
-            {
-                State = GameState.Won;
-                Time.timeScale = 0f;
-            }
-        }
-        else if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
-        {
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
+        stats = FindFirstObjectByType<SurvivalStats>();
+        if (stats != null) stats.Died += OnDied;
     }
 
     void OnDestroy()
     {
+        if (stats != null) stats.Died -= OnDied;
         if (Instance == this) Instance = null;
+    }
+
+    void Update()
+    {
+        if (State != GameState.Playing && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+    }
+
+    public void Win()
+    {
+        if (State != GameState.Playing) return;
+        State = GameState.Won;
+        if (ObjectiveManager.Instance != null) ObjectiveManager.Instance.Milestone("rescued");
+        var c = GameClock.Instance;
+        EndTitle = "Rescued!";
+        EndDetail = c != null ? $"You reached the rescue point on day {c.DayCount} at {c.TimeText}." : "";
+    }
+
+    void OnDied()
+    {
+        if (State != GameState.Playing) return;
+        State = GameState.Lost;
+        var c = GameClock.Instance;
+        EndTitle = stats.DeathCause;
+        EndDetail = c != null ? $"Day {c.DayCount}, {c.TimeText}." : "";
     }
 }

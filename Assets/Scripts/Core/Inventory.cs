@@ -1,8 +1,33 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
-public enum ItemType { Wood, Stone, Berry, Water }
+/// <summary>
+/// Add new items only at the END: the numbers are stored in the scene.
+/// Wet/green variants exist so that "not everything burns" can be taught.
+/// </summary>
+public enum ItemType
+{
+    None, Bottle, DirtyWater, CleanWater, Jacket, Lighter, Map, Snack,
+    Tarp, Tinder, Kindling, Logs, WetTinder, WetKindling, WetLogs, GreenWood,
+}
+
+public static class ItemInfo
+{
+    /// <summary>"DirtyWater" -> "Dirty Water".</summary>
+    public static string Pretty(this ItemType type)
+    {
+        string s = type.ToString();
+        var sb = new StringBuilder();
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(s[i])) sb.Append(' ');
+            sb.Append(s[i]);
+        }
+        return sb.ToString();
+    }
+}
 
 /// <summary>Simple count-based inventory.</summary>
 public class Inventory : MonoBehaviour
@@ -12,9 +37,12 @@ public class Inventory : MonoBehaviour
     public event Action Changed;
 
     public int Count(ItemType type) => items.TryGetValue(type, out int n) ? n : 0;
+    public bool Has(ItemType type) => Count(type) > 0;
+    public IEnumerable<KeyValuePair<ItemType, int>> All => items;
 
     public void Add(ItemType type, int amount = 1)
     {
+        if (type == ItemType.None || amount <= 0) return;
         items[type] = Count(type) + amount;
         Changed?.Invoke();
     }
@@ -23,6 +51,7 @@ public class Inventory : MonoBehaviour
     {
         if (Count(type) < amount) return false;
         items[type] = Count(type) - amount;
+        if (items[type] == 0) items.Remove(type);
         Changed?.Invoke();
         return true;
     }

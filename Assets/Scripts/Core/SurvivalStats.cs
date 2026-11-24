@@ -1,109 +1,142 @@
 using System;
 using UnityEngine;
 
+public enum StatType { Energy, Water, Food, Warmth }
+
 /// <summary>
-/// Health, hunger, thirst and energy.
-/// A day lasts 120s (see DayNightCycle): thirst empties in ~3 days, hunger in ~6.
-/// Sprinting burns energy and a little health. Missions failed cost energy.
+/// The four survival values (all 0-100, full = good). All of them fall with game time;
+/// Energy falls slowly with time, faster while walking, and through actions. Any value at 0 ends the game.
 /// </summary>
 public class SurvivalStats : MonoBehaviour
 {
-    [Header("Maximums")]
-    public float maxHealth = 100f;
-    public float maxHunger = 100f;
-    public float maxThirst = 100f;
-    public float maxEnergy = 100f;
+    public float max = 100f;
 
-    [Header("Decay per second")]
-    public float hungerDecay = 0.15f;   // ~6 days from full
-    public float thirstDecay = 0.30f;   // ~3 days from full
-    public float sprintDecayMultiplier = 1.5f;
+    [Header("Loss per game minute")]
+    public float waterLoss = 0.10f;        // empty after ~17 game hours without drinking
+    public float foodLoss = 0.04f;
+    public float warmthLossDay = 0.02f;
+    public float warmthLossNight = 0.10f;
+    [Tooltip("Energy lost per game minute just from being awake. Walking costs extra on top (see PlayerController).")]
+    public float energyLossPerMinute = 0.03f;
 
-    [Header("Energy")]
-    public float sprintEnergyCost = 12f;
-    public float sprintHealthCost = 0.6f;
-    public float energyRegen = 2.5f;
+    [Header("Warning levels")]
+    public float warnLevel = 30f;
+    public float criticalLevel = 15f;
 
-    [Header("Health")]
-    public float starvationDamagePerSecond = 1.5f;
-    public float regenPerSecond = 0.8f;
-    [Range(0f, 1f)] public float regenThreshold = 0.5f;
+    [Header("Warmth loss multipliers (below 1 = protected, above 1 = exposed)")]
+    [Tooltip("Clothing: the jacket sets this to 0.6.")]
+    public float gearFactor = 1f;
+    [Tooltip("Set by the ShelterZone the player stands in (meadow, forest edge, rock overhang).")]
+    public float shelterFactor = 1f;
+    [Tooltip("Set by Weather while it rains.")]
+    public float weatherFactor = 1f;
 
-    public float Health { get; private set; }
-    public float Hunger { get; private set; }
-    public float Thirst { get; private set; }
+    /// <summary>Total multiplier on warmth loss: gear x shelter x weather.</summary>
+    public float ExposureMultiplier => gearFactor * shelterFactor * weatherFactor;
+
+    /// <summary>Name of the place the player is in (set by ShelterZone), for the HUD.</summary>
+    public string ZoneLabel { get; set; } = "";
+
     public float Energy { get; private set; }
+    public float Water { get; private set; }
+    public float Food { get; private set; }
+    public float Warmth { get; private set; }
+
+    /// <summary>True while a resting action (sleep) runs: no passive energy loss.</summary>
+    public bool IsResting { get; set; }
+
     public bool IsDead { get; private set; }
     public string DeathCause { get; private set; } = "";
-    public bool IsSprinting { get; set; }
-    public bool IsExhausted => Energy <= 0.1f;
+    public StatType? DeathStat { get; private set; }
 
+    public event Action Changed;
     public event Action Died;
+    /// <summary>Level 0 = fine, 1 = low, 2 = critical.</summary>
+    public event Action<StatType, int> LevelChanged;
+
+    readonly int[] levels = new int[4];
 
     void Awake()
     {
-        Health = maxHealth;
-        Hunger = maxHunger;
-        Thirst = maxThirst;
-        Energy = maxEnergy;
+        Energy = Water = Food = Warmth = max;
     }
 
-    void Update()
+    void Start()
     {
-        if (IsDead) return;
-
-        bool sprinting = IsSprinting && !IsExhausted;
-        float mult = sprinting ? sprintDecayMultiplier : 1f;
-        Hunger = Mathf.Max(0f, Hunger - hungerDecay * mult * Time.deltaTime);
-        Thirst = Mathf.Max(0f, Thirst - thirstDecay * mult * Time.deltaTime);
-
-        if (sprinting)
-        {
-            Energy = Mathf.Max(0f, Energy - sprintEnergyCost * Time.deltaTime);
-            Health -= sprintHealthCost * Time.deltaTime;
-        }
-        else if (Hunger > 0f && Thirst > 0f)
-        {
-            Energy = Mathf.Min(maxEnergy, Energy + energyRegen * Time.deltaTime);
-        }
-
-        if (Hunger <= 0f || Thirst <= 0f)
-        {
-            Health -= starvationDamagePerSecond * Time.deltaTime;
-        }
-        else if (Hunger / maxHunger >= regenThreshold && Thirst / maxThirst >= regenThreshold && !sprinting)
-        {
-            Health = Mathf.Min(maxHealth, Health + regenPerSecond * Time.deltaTime);
-        }
-
-        if (Health <= 0f) Die();
+        if (GameClock.Instance != null) GameClock.Instance.Advanced += OnAdvanced;
     }
 
-    public void Eat(float amount) => Hunger = Mathf.Min(maxHunger, Hunger + amount);
-    public void Drink(float amount) => Thirst = Mathf.Min(maxThirst, Thirst + amount);
-    public void RestoreEnergy(float amount) => Energy = Mathf.Min(maxEnergy, Energy + amount);
-
-    /// <summary>Lose energy; whatever can't be paid from energy hurts health instead.</summary>
-    public void LoseEnergy(float amount)
+    void OnDestroy()
     {
-        if (IsDead) return;
-        Energy -= amount;
-        if (Energy < 0f)
+        if (GameClock.Instance != null) GameClock.Instance.Advanced -= OnAdvanced;
+    }
+
+    public float Get(StatType type)
+    {
+        switch (type)
         {
-            Health += Energy * 0.5f; // overflow, half as harsh
-            Energy = 0f;
-            if (Health <= 0f) Die();
+            case StatType.Energy: return Energy;
+            case StatType.Water: return Water;
+            case StatType.Food: return Food;
+            default: return Warmth;
         }
     }
 
-    void Die()
+    public int GetLevel(StatType type) => levels[(int)type];
+
+    void OnAdvanced(float minutes)
     {
         if (IsDead) return;
-        Health = 0f;
+
+        bool night = GameClock.Instance != null && GameClock.Instance.IsNight;
+        float warmthLoss = (night ? warmthLossNight : warmthLossDay) * ExposureMultiplier;
+        float fireWarmth = Campfire.WarmthAt(transform.position);   // being close to a lit fire warms you
+
+        if (!IsResting) Energy = Mathf.Max(0f, Energy - energyLossPerMinute * minutes);
+        Water = Mathf.Max(0f, Water - waterLoss * minutes);
+        Food = Mathf.Max(0f, Food - foodLoss * minutes);
+        Warmth = Mathf.Clamp(Warmth + (fireWarmth - warmthLoss) * minutes, 0f, max);
+        Evaluate();
+    }
+
+    /// <summary>Add (or subtract, if negative) to the stats.</summary>
+    public void Apply(float energy = 0f, float water = 0f, float food = 0f, float warmth = 0f)
+    {
+        if (IsDead) return;
+        Energy = Mathf.Clamp(Energy + energy, 0f, max);
+        Water = Mathf.Clamp(Water + water, 0f, max);
+        Food = Mathf.Clamp(Food + food, 0f, max);
+        Warmth = Mathf.Clamp(Warmth + warmth, 0f, max);
+        Evaluate();
+    }
+
+    void Evaluate()
+    {
+        Changed?.Invoke();
+
+        for (int i = 0; i < levels.Length; i++)
+        {
+            float v = Get((StatType)i);
+            int lvl = v <= criticalLevel ? 2 : (v <= warnLevel ? 1 : 0);
+            if (lvl != levels[i])
+            {
+                levels[i] = lvl;
+                LevelChanged?.Invoke((StatType)i, lvl);
+            }
+        }
+
+        if (Energy <= 0f) Die(StatType.Energy, "You collapsed from exhaustion.");
+        else if (Water <= 0f) Die(StatType.Water, "You died of thirst.");
+        else if (Warmth <= 0f) Die(StatType.Warmth, "You froze in the night.");
+        else if (Food <= 0f) Die(StatType.Food, "You starved.");
+    }
+
+    void Die(StatType stat, string cause)
+    {
+        if (IsDead) return;
         IsDead = true;
-        if (Thirst <= 0f) DeathCause = "You died of thirst.";
-        else if (Hunger <= 0f) DeathCause = "You starved.";
-        else DeathCause = "You collapsed from exhaustion.";
+        DeathStat = stat;
+        DeathCause = cause;
         Died?.Invoke();
     }
 }
