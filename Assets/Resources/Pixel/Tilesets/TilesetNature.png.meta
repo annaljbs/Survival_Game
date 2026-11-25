@@ -11417,6 +11417,28 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: TilesetNature_r0_32_64x48
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 256
+        width: 64
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9310e87a67e06433c82db973238c1c2c
+      internalID: 1742504717
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
@@ -11936,6 +11958,7 @@ TextureImporter:
       TilesetNature_9_8: -679390927
       TilesetNature_9_9: 1781032823
       TilesetNature_r0_0_32x32: 1473117468
+      TilesetNature_r0_32_64x48: 1742504717
       TilesetNature_r144_288_48x48: -1259488596
       TilesetNature_r192_0_32x32: 1066523503
       TilesetNature_r256_0_32x32: -1091618533

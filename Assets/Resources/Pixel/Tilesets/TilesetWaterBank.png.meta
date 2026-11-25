@@ -1,0 +1,598 @@
+fileFormatVersion: 2
+guid: 95241aeff09014134b9312ebb33b22bb
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5808678886339421906
+    second: TilesetWaterBank_0
+  - first:
+      213: -7753166200381393056
+    second: TilesetWaterBank_1
+  - first:
+      213: -649314616026081914
+    second: TilesetWaterBank_2
+  - first:
+      213: -548477094784275420
+    second: TilesetWaterBank_3
+  - first:
+      213: 5060303536157725282
+    second: TilesetWaterBank_4
+  - first:
+      213: -4838239623768756804
+    second: TilesetWaterBank_5
+  - first:
+      213: 7538657526587481512
+    second: TilesetWaterBank_6
+  - first:
+      213: -94290092357720891
+    second: TilesetWaterBank_7
+  - first:
+      213: -4572618720400281257
+    second: TilesetWaterBank_8
+  - first:
+      213: 1497557485869205925
+    second: TilesetWaterBank_9
+  - first:
+      213: -2356236062690193724
+    second: TilesetWaterBank_10
+  - first:
+      213: 2849189421917689052
+    second: TilesetWaterBank_11
+  - first:
+      213: -125886202698288741
+    second: TilesetWaterBank_12
+  - first:
+      213: 3805835757915648844
+    second: TilesetWaterBank_13
+  - first:
+      213: -6191942901634205296
+    second: TilesetWaterBank_14
+  - first:
+      213: 2244176907122589956
+    second: TilesetWaterBank_15
+  - first:
+      213: -5304045730693950260
+    second: TilesetWaterBank_16
+  - first:
+      213: 4190380852571991475
+    second: TilesetWaterBank_17
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 16
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: TilesetWaterBank_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 191
+        width: 401
+        height: 81
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e295d6d145d636fa0800000000000000
+      internalID: -5808678886339421906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_1
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 265
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 067b3b53b68376490800000000000000
+      internalID: -7753166200381393056
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_2
+      rect:
+        serializedVersion: 2
+        x: 406
+        y: 262
+        width: 10
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 685db440ccb2df6f0800000000000000
+      internalID: -649314616026081914
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_3
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 255
+        width: 33
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42ce1fdfcfa6368f0800000000000000
+      internalID: -548477094784275420
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_4
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 257
+        width: 11
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2629558614fc93640800000000000000
+      internalID: 5060303536157725282
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_5
+      rect:
+        serializedVersion: 2
+        x: 403
+        y: 242
+        width: 10
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cbd2b0f32be1bdcb0800000000000000
+      internalID: -4838239623768756804
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_6
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 175
+        width: 17
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ad52933411be9860800000000000000
+      internalID: 7538657526587481512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_7
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 129
+        width: 14
+        height: 46
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c4ed2b19a301bef0800000000000000
+      internalID: -94290092357720891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_8
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 113
+        width: 62
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7517d35208bca80c0800000000000000
+      internalID: -4572618720400281257
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_9
+      rect:
+        serializedVersion: 2
+        x: 127
+        y: 111
+        width: 50
+        height: 66
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a906f7599468c410800000000000000
+      internalID: 1497557485869205925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_10
+      rect:
+        serializedVersion: 2
+        x: 207
+        y: 95
+        width: 178
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4cec26ce8c7fc4fd0800000000000000
+      internalID: -2356236062690193724
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_11
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 132
+        width: 40
+        height: 40
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd4543ffeaa5a8720800000000000000
+      internalID: 2849189421917689052
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_12
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 113
+        width: 46
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b91bb066a23c04ef0800000000000000
+      internalID: -125886202698288741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_13
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 114
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c43ba08257b01d430800000000000000
+      internalID: 3805835757915648844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_14
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 177
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 099779ebcbcc11aa0800000000000000
+      internalID: -6191942901634205296
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_15
+      rect:
+        serializedVersion: 2
+        x: 65
+        y: 95
+        width: 62
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4014d22c10be42f10800000000000000
+      internalID: 2244176907122589956
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_16
+      rect:
+        serializedVersion: 2
+        x: 127
+        y: 95
+        width: 18
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc45f8d828e3466b0800000000000000
+      internalID: -5304045730693950260
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TilesetWaterBank_17
+      rect:
+        serializedVersion: 2
+        x: 207
+        y: 79
+        width: 18
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3bde62f0f29372a30800000000000000
+      internalID: 4190380852571991475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      TilesetWaterBank_0: -5808678886339421906
+      TilesetWaterBank_1: -7753166200381393056
+      TilesetWaterBank_10: -2356236062690193724
+      TilesetWaterBank_11: 2849189421917689052
+      TilesetWaterBank_12: -125886202698288741
+      TilesetWaterBank_13: 3805835757915648844
+      TilesetWaterBank_14: -6191942901634205296
+      TilesetWaterBank_15: 2244176907122589956
+      TilesetWaterBank_16: -5304045730693950260
+      TilesetWaterBank_17: 4190380852571991475
+      TilesetWaterBank_2: -649314616026081914
+      TilesetWaterBank_3: -548477094784275420
+      TilesetWaterBank_4: 5060303536157725282
+      TilesetWaterBank_5: -4838239623768756804
+      TilesetWaterBank_6: 7538657526587481512
+      TilesetWaterBank_7: -94290092357720891
+      TilesetWaterBank_8: -4572618720400281257
+      TilesetWaterBank_9: 1497557485869205925
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

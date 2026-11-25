@@ -1,7 +1,7 @@
 # Project guide: "Ohne Empfang / No Signal"
 
 Status written on 25.11.2026 (after the session of 24.11.2026). Read this first when you come back.
-Other documents: `docs/LEVEL_EDITING.md` (level design steps), `docs/TUNING.md` (all numbers and costs), `docs/CREDITS.md` (art, font, sound), `docs/GDD.md` (game design document, mostly still empty), `docs/survivalspiel_konzept.md` (concept, German).
+Other documents: `docs/LEVEL_DESIGN_ANLEITUNG.md` (German: how to refine ground, water, bushes, trees, plateau yourself), `docs/LEVEL_EDITING.md` (level design steps), `docs/TUNING.md` (all numbers and costs), `docs/CREDITS.md` (art, font, sound), `docs/GDD.md` (game design document, mostly still empty), `docs/survivalspiel_konzept.md` (concept, German).
 
 ---
 
@@ -62,6 +62,11 @@ A plane crashes in the wilderness. You wake up with 3 percent phone battery and 
 | Place Bushes at the Forest Edge | replaces the automatic bushes by small clumps at the forest edge |
 | Remove Automatic Bushes | removes the automatic bushes again |
 | Ground > Soft Paths + Olive Meadow / Green Meadow | turns the plain dirt squares into **soft Rule Tile paths** (`Assets/Tiles/Ground/DirtPath_*`), sets the ground to the matching grass and paints a **Meadow** tilemap with random grass tufts. Run again to switch colour. *Remove Meadow Tufts* deletes the tufts |
+| Ground > Soft Water From Old Water Rectangles / Create Water Tile + Water Tilemap | soft water with shore (`Water_Pond` Rule Tile) on a `Water` tilemap; the old blue rectangles are hidden, their colliders and the cold-river zone stay |
+| Ground > Prepare Water Sheet for Hand Painting / Make Paths Flush With Water / Reset Water | `TilesetWaterBank` (water with see-through bank), path continued under river cells so the bank meets the path without a grass edge, clear painted water |
+| Forest > Scatter Fir Trees (sparse/medium/dense) | plants firs of four sizes over the whole forest area, small at the path and tall deeper in, in groves with clearings |
+| Forest > Thin Out Forest / Remove Trees On Water / Create Fir Tiles | invisible wall (`Forest Wall`) where trees stood, a few fir trees (four sizes S/M/L/XL) along the open ground, trees on water removed; fir tiles for hand painting |
+| Ground > Create Random Deco Tiles | `Random_Bushes`, `Random_Ferns`, `Random_Flowers`, `Random_Forest_Floor`: paint one tile, Unity picks a different bush each time |
 | Slice Ninja Pack Sheets (16x16) | cuts the tilesets and actor sprite sheets of the full pack (`Assets/Art/NinjaAdventure`) into 16x16 sprites for the Tile Palette. Run once after the pack is imported |
 
 ---
