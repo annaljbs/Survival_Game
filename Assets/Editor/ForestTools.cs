@@ -188,36 +188,29 @@ public static class ForestTools
     public static void ScatterDense() => ScatterFirs(0.80f);
 
     /// <summary>
-    /// Plants fir trees of four sizes on the whole forest area (everywhere the invisible Forest Wall is), in groves with clearings.
-    /// Small firs stand at the path, tall ones deeper in. Trees that are there already stay. Running it again adds more.
+    /// Finds out what is forest and what is open ground.
+    /// blocked = cells of the forest wall and of trees, reachable = open ground the Player can walk to,
+    /// depth = distance of every forest cell to the open ground (1 = touches it), occupied = cells with a tree (size index).
     /// </summary>
-    static void ScatterFirs(float baseChance)
+    static bool Analyze(Tilemap trees, Tilemap wall, out HashSet<Vector3Int> blocked, out HashSet<Vector3Int> reachable,
+                        out Dictionary<Vector3Int, int> depth, out Dictionary<Vector3Int, int> occupied)
     {
-        var trees = Find("Trees");
-        var wall = Find("Forest Wall");
-        if (trees == null || wall == null)
+        blocked = new HashSet<Vector3Int>();
+        occupied = new Dictionary<Vector3Int, int>();
+        reachable = new HashSet<Vector3Int>();
+        depth = new Dictionary<Vector3Int, int>();
+        if (wall != null)
         {
-            EditorUtility.DisplayDialog("Forest", "There must be tilemaps called \"Trees\" and \"Forest Wall\". Run Survival > Forest > Thin Out Forest first.", "OK");
-            return;
+            wall.CompressBounds();
+            foreach (var c in wall.cellBounds.allPositionsWithin) if (wall.HasTile(c)) blocked.Add(c);
         }
-        var firs = EnsureFirTiles();
-        Undo.RegisterCompleteObjectUndo(trees, "Scatter fir trees");
-
-        // cells that are forest (wall or tree) and trees that stand already
-        wall.CompressBounds();
         trees.CompressBounds();
-        var blocked = new HashSet<Vector3Int>();
-        foreach (var c in wall.cellBounds.allPositionsWithin) if (wall.HasTile(c)) blocked.Add(c);
-        var occupied = new Dictionary<Vector3Int, int>();   // cell -> size index of the tree there
         foreach (var c in trees.cellBounds.allPositionsWithin)
             if (trees.HasTile(c)) { blocked.Add(c); occupied[c] = 1; }
-        var onWater = TreeCellsOnWater(trees);
 
-        // open ground the player can reach
         int hx = Mathf.CeilToInt(MapData.HalfW / MapData.Cell), hy = Mathf.CeilToInt(MapData.HalfH / MapData.Cell);
         var player = GameObject.Find("Player");
         Vector3Int start = player != null ? trees.WorldToCell(player.transform.position) : Vector3Int.zero;
-        var reachable = new HashSet<Vector3Int>();
         var queue = new Queue<Vector3Int>();
         if (!blocked.Contains(start)) { reachable.Add(start); queue.Enqueue(start); }
         Vector3Int[] dirs4 = { Vector3Int.right, Vector3Int.left, Vector3Int.up, Vector3Int.down };
@@ -232,14 +225,8 @@ public static class ForestTools
                 queue.Enqueue(n);
             }
         }
-        if (reachable.Count < 5)
-        {
-            EditorUtility.DisplayDialog("Forest", "The Player must stand on open ground (not inside the forest wall) so the open ground can be found.", "OK");
-            return;
-        }
+        if (reachable.Count < 5) return false;
 
-        // depth of every forest cell = distance to the open ground
-        var depth = new Dictionary<Vector3Int, int>();
         var q2 = new Queue<Vector3Int>();
         foreach (var r in reachable)
             for (int dx = -1; dx <= 1; dx++)
@@ -260,6 +247,39 @@ public static class ForestTools
                     if (blocked.Contains(n) && !depth.ContainsKey(n)) { depth[n] = dc + 1; q2.Enqueue(n); }
                 }
         }
+        return true;
+    }
+
+    const string NeedPlayer = "The Player must stand on open ground (not inside the forest wall) so the open ground can be found.";
+
+    static int RollSize(System.Random rng, float[] w)
+    {
+        float roll = (float)rng.NextDouble() * w.Sum();
+        for (int i = 0; i < w.Length; i++) { if (roll < w[i]) return i; roll -= w[i]; }
+        return 0;
+    }
+
+    /// <summary>
+    /// Plants fir trees of four sizes on the whole forest area (everywhere the invisible Forest Wall is), in groves with clearings.
+    /// Small firs stand at the path, tall ones deeper in. Trees that are there already stay. Running it again adds more.
+    /// </summary>
+    static void ScatterFirs(float baseChance)
+    {
+        var trees = Find("Trees");
+        var wall = Find("Forest Wall");
+        if (trees == null || wall == null)
+        {
+            EditorUtility.DisplayDialog("Forest", "There must be tilemaps called \"Trees\" and \"Forest Wall\". Run Survival > Forest > Thin Out Forest first.", "OK");
+            return;
+        }
+        var firs = EnsureFirTiles();
+        Undo.RegisterCompleteObjectUndo(trees, "Scatter fir trees");
+        if (!Analyze(trees, wall, out var blocked, out var reachable, out var depth, out var occupied))
+        {
+            EditorUtility.DisplayDialog("Forest", NeedPlayer, "OK");
+            return;
+        }
+        var onWater = TreeCellsOnWater(trees);
 
         var rng = new System.Random();
         float seed = (float)rng.NextDouble() * 1000f;
@@ -274,11 +294,7 @@ public static class ForestTools
             float chance = Mathf.Clamp01(baseChance * Mathf.Lerp(0.25f, 1.4f, noise));
             if (rng.NextDouble() > chance) continue;
 
-            var w = DepthWeights(depth[c]);
-            float total = w.Sum(), roll = (float)rng.NextDouble() * total;
-            int size = 0;
-            for (int i = 0; i < w.Length; i++) { if (roll < w[i]) { size = i; break; } roll -= w[i]; }
-
+            int size = RollSize(rng, DepthWeights(depth[c]));
             bool ok = true;
             for (int dx = -3; dx <= 3 && ok; dx++)
                 for (int dy = -3; dy <= 3 && ok; dy++)
@@ -298,6 +314,73 @@ public static class ForestTools
         if (rend != null) rend.sortOrder = TilemapRenderer.SortOrder.TopLeft;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log($"Forest: {placed} fir trees placed over the forest (sizes S/M/L/XL: {perSize[0]}/{perSize[1]}/{perSize[2]}/{perSize[3]}). Save with Cmd+S.");
+    }
+
+    // sizes S, M, L, XL for the tree line at the edge and for the row behind it
+    static readonly float[] EdgeWeights = { 3f, 3f, 2f, 1f };
+    static readonly float[] BackRowWeights = { 0.5f, 2f, 3f, 2f };
+    const float BackRowChance = 0.75f;
+
+    /// <summary>
+    /// A closed line of fir trees along the whole edge of the walkable ground, so you can see where you cannot go:
+    /// every forest cell that touches open ground gets a fir (mixed sizes, mirrored at random), and a second row behind it
+    /// with taller firs peeks out over the first. Trees that are there already stay. Cmd+Z undoes it.
+    /// </summary>
+    [MenuItem("Survival/Forest/Border Trees Along the Edge of the Walkable Ground")]
+    public static void BorderTrees()
+    {
+        var trees = Find("Trees");
+        var wall = Find("Forest Wall");
+        if (trees == null)
+        {
+            EditorUtility.DisplayDialog("Forest", "There is no tilemap called \"Trees\" in the open scene.", "OK");
+            return;
+        }
+        var firs = EnsureFirTiles();
+        Undo.RegisterCompleteObjectUndo(trees, "Border trees");
+        if (!Analyze(trees, wall, out var blocked, out var reachable, out var depth, out var occupied))
+        {
+            EditorUtility.DisplayDialog("Forest", NeedPlayer, "OK");
+            return;
+        }
+        var onWater = TreeCellsOnWater(trees);
+        var rng = new System.Random();
+        var perSize = new int[4];
+        int placed = 0;
+
+        void Plant(Vector3Int c, float[] weights)
+        {
+            if (occupied.ContainsKey(c) || onWater.Contains(c)) return;
+            int size = RollSize(rng, weights);
+            occupied[c] = size;
+            trees.SetTile(c, firs[size][rng.Next(2)]);
+            perSize[size]++;
+            placed++;
+        }
+
+        // the map edge: open ground that touches the border of the map has no forest wall behind it, so make the cells beyond it trees
+        int hx = Mathf.CeilToInt(MapData.HalfW / MapData.Cell), hy = Mathf.CeilToInt(MapData.HalfH / MapData.Cell);
+        var outside = new List<Vector3Int>();
+        foreach (var r in reachable)
+        {
+            if (r.x >= hx) outside.Add(r + Vector3Int.right);
+            if (r.x <= -hx) outside.Add(r + Vector3Int.left);
+            if (r.y >= hy) outside.Add(r + Vector3Int.up);
+            if (r.y <= -hy) outside.Add(r + Vector3Int.down);
+        }
+
+        // row 1: every forest cell that touches the open ground (and the cells beyond the map border)
+        foreach (var c in depth.Where(kv => kv.Value == 1).Select(kv => kv.Key).Concat(outside).Distinct().OrderBy(_ => rng.Next()).ToList())
+            Plant(c, EdgeWeights);
+
+        // row 2: behind it, tall firs that peek out over the first row
+        foreach (var c in depth.Where(kv => kv.Value == 2).Select(kv => kv.Key).OrderBy(_ => rng.Next()).ToList())
+            if (rng.NextDouble() < BackRowChance) Plant(c, BackRowWeights);
+
+        var rend = trees.GetComponent<TilemapRenderer>();
+        if (rend != null) rend.sortOrder = TilemapRenderer.SortOrder.TopLeft;
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"Forest: {placed} border trees placed (sizes S/M/L/XL: {perSize[0]}/{perSize[1]}/{perSize[2]}/{perSize[3]}). Save with Cmd+S.");
     }
 
     static Tile MakeWallTile()

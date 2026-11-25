@@ -203,6 +203,15 @@ Der Spieler (`Player`) muss beim Ausführen auf offenem Boden stehen, weil von d
 - Dichte: `sparse` (30 %), `medium` (50 %), `dense` (80 %). Beginne mit sparse.
 Voraussetzung: `Forest Wall` existiert (vorher *Thin Out Forest*) und der `Player` steht auf offenem Boden.
 
+### Rand des Begehbaren mit Bäumen markieren
+**Survival > Forest > Border Trees Along the Edge of the Walkable Ground** macht eine **geschlossene Baumreihe** um alles, was man betreten kann, damit man sofort sieht, wo Schluss ist:
+- Jede Waldzelle, die an offenen Boden grenzt, bekommt eine Tanne (gemischte Größen S/M/L/XL, zufällig gespiegelt).
+- Dahinter eine zweite Reihe mit höheren Tannen, die über die erste hinausragen (75 % der Plätze).
+- Auch am Kartenrand: Wo begehbarer Boden an den Rand der Karte stößt, kommen Bäume dahinter.
+- Nicht auf Wasser. Vorhandene Bäume bleiben. **Cmd+Z** macht es rückgängig.
+- Reihenfolge: zuerst *Border Trees*, danach bei Bedarf *Scatter Fir Trees (sparse)* für das Innere des Waldes.
+- Anteile der Größen und die Dichte der zweiten Reihe: oben in `Assets/Editor/ForestTools.cs` (`EdgeWeights`, `BackRowWeights`, `BackRowChance`).
+
 ### Verschiedene Größen
 Die Bäume im Pack gibt es in:
 - **klein 32x32:** Zeile 0 und 1 des `TilesetNature`,
