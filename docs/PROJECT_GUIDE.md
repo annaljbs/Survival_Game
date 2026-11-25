@@ -61,6 +61,8 @@ A plane crashes in the wilderness. You wake up with 3 percent phone battery and 
 | More Tree Variety | swaps about 40% of the trees for other kinds (run once) |
 | Place Bushes at the Forest Edge | replaces the automatic bushes by small clumps at the forest edge |
 | Remove Automatic Bushes | removes the automatic bushes again |
+| Ground > Soft Paths + Olive Meadow / Green Meadow | turns the plain dirt squares into **soft Rule Tile paths** (`Assets/Tiles/Ground/DirtPath_*`), sets the ground to the matching grass and paints a **Meadow** tilemap with random grass tufts. Run again to switch colour. *Remove Meadow Tufts* deletes the tufts |
+| Slice Ninja Pack Sheets (16x16) | cuts the tilesets and actor sprite sheets of the full pack (`Assets/Art/NinjaAdventure`) into 16x16 sprites for the Tile Palette. Run once after the pack is imported |
 
 ---
 
@@ -120,7 +122,8 @@ I (Claude) cannot run Unity, so everything was compiled with Unity's own compile
 | `Assets/Resources/Pixel` | all pictures, fonts and sounds that are loaded by name (Tilesets, Characters, Items, Ui, Fx, Custom, Audio) |
 | `Assets/Tiles`, `Assets/Prefabs/Objects` | Tile assets and object prefabs |
 | `Assets/Scenes` | `Level.unity` (yours), `landscape.unity` (old generated), `SampleScene` (unused) |
-| `Assets/Art/NinjaAdventure`, `Assets/Art/Fonts` | license files |
+| `Assets/Art/NinjaAdventure` | the **complete Ninja Adventure pack** (Actor, Backgrounds, FX, Items, Ui, Audio, Palette.png, license). Browse here for new art. It is outside `Resources`, so it is not packed into builds. Used pieces are copied into `Assets/Resources/Pixel` (the code loads those by name) |
+| `Assets/Art/Fonts` | font license files |
 
 ### How things came about
 1. A generator script (`GreyboxSceneBuilder`) built a test level from coloured squares, because Unity could not be driven from the chat. It is why the first versions had "greybox" squares.
@@ -171,7 +174,7 @@ To change it:
   - Item icons are named like their file in `Assets/Resources/Pixel/Items/...`; tileset pieces are `<Sheet>_<column>_<row>`.
   - If you change a **prefab** (double-click it in `Assets/Prefabs/Objects`), all objects of that kind change.
 - **Your own picture**: put a PNG into `Assets/Resources/Pixel/Custom/` (it becomes one sprite) and pick it as above. 16 pixels = 1 unit.
-- **More from the Ninja Adventure pack**: only the parts we use were copied. The complete pack zip is still in your **Downloads** folder (`Ninja Adventure - Asset Pack.zip`): unzip it somewhere else, copy a file (for example another character sheet) into `Assets/Resources/Pixel/...` and use it.
+- **More from the Ninja Adventure pack**: the whole pack is in `Assets/Art/NinjaAdventure` (without the preview GIFs). Tileset sprites are named `<Sheet>_<column>_<row>` (for example `TilesetRelief_3_10`), actor sheets use the folder name (`Frog_0_0`). In the Tile Palette drag a sheet from `Assets/Art/NinjaAdventure/Backgrounds/Tilesets`. Single pictures (items, UI, FX) are one sprite each. To use something in code via `Resources.Load`, copy that one file into `Assets/Resources/Pixel/...`.
 - **Player picture/animation**: component `Pixel Character` on `Player`, field **Resource** (`Pixel/Characters/Hunter`). Another sheet needs the same layout (columns down, up, left, right; rows = walking frames).
 - **Font**: `Assets/Resources/Pixel/Ui/PixelifySans.ttf`, used in `SurvivalHUD.cs` and the camp labels.
 - **Sounds and music**: `Assets/Resources/Pixel/Audio/...`. Replace a file with the same name to swap it. Volumes: component `Audio Director` while playing (ambience 0.5, music 0.35, effects 0.7).
